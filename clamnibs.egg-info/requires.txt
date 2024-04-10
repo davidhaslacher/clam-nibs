@@ -1,0 +1,11 @@
+emd>=0.6.2
+fooof>=1.0.0
+matplotlib>=3.7.1
+mne>=1.5.1
+numpy>=1.25.0
+pandas>=2.0.3
+pingouin>=0.5.3
+pycircstat>=0.0.2
+scipy>=1.11.2
+seaborn>=0.13.2
+setuptools>=69.0.3
