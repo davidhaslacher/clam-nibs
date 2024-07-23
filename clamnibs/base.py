@@ -101,11 +101,6 @@ class RawCLAM(RawBrainVision):
             from . import viz
             viz.set_bads(self)
             
-            # Save the indexes to exclude as well as the channels to use for the experiment
-            exclude_idx = np.sort([self.ch_names.index(ch) + 1 for ch in self.info['bads']])
-            data_dict = {"exclude_idx": exclude_idx}
-            savemat(exclude_idx_file_path, data_dict)
-            
         p_target_file_path = '{}\\P_TARGET_{:d}.mat'.format(folder_path, int(n_chs))
         if exists(p_target_file_path):
             self.forward_full = loadmat(p_target_file_path)['P_TARGET_{:d}'.format(int(n_chs))][0]
@@ -117,14 +112,6 @@ class RawCLAM(RawBrainVision):
             from . import beamformer
             beamformer.set_forward(self, 1, 30)
             
-            # Save forward model for matlab
-            data_dict = {'P_TARGET_%i'%n_chs: self.forward_full}
-            savemat(p_target_file_path, data_dict)
-        
-        # Save phase delay for matlab? 
-        data_dict = {'phase_delay':0.0}
-        savemat('{}\\phase_delay.mat'.format(folder_path), data_dict)
-
         flip_file_path = '{}\\flip.mat'.format(folder_path)
         if exists(flip_file_path):
             self.flip = loadmat(flip_file_path)['flip'][0]
@@ -135,10 +122,6 @@ class RawCLAM(RawBrainVision):
             
             from . import beamformer
             beamformer.set_flip(self)
-            
-            # Save flip for matlab
-            data_dict = {'flip':self.flip}
-            savemat(flip_file_path, data_dict)
         
 
 
