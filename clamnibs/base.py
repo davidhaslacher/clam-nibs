@@ -2,7 +2,7 @@ import mne
 from mne.io.brainvision.brainvision import RawBrainVision
 from os.path import dirname, basename, exists
 import numpy as np
-from scipy.io import loadmat
+from scipy.io import loadmat, savemat
 from mne import Epochs
 
 class RawCLAM(RawBrainVision):
@@ -66,15 +66,16 @@ class RawCLAM(RawBrainVision):
                                6: (5 / 6) * 2 * np.pi},
             sfreq=None):
         super().__init__(path, preload=True)
+        self.n_chs = n_chs
         if sfreq is not None:
             self.resample(sfreq)
         self.filter(l_freq_target, h_freq_target, picks=['envelope'])
         folder_path = dirname(path)
         misc_channels = [ch for ch in misc_channels if ch in self.ch_names]
-        if 'stim' in path.lower():
-            self.is_stim = True
-        else:
+        if 'no_stim' in path.lower():
             self.is_stim = False
+        else:
+            self.is_stim = True
         self.design = design
         self.set_channel_types({
             **{ch: 'ecg' for ch in ecg_channels},
@@ -84,36 +85,61 @@ class RawCLAM(RawBrainVision):
         self.marker_definition = marker_definition
         self.tmin = tmin
         self.tmax = tmax
-        self.set_montage('easycap-M1', match_case=False)
+        self.set_montage('easycap-M1', match_case=False, on_missing='warn')
         if design == 'trial_wise':
             self.participant = basename(dirname(path))
             self.session = 'T01'
         else:
             self.participant = basename(dirname(dirname(path)))
             self.session = basename(dirname(path))
-        if exists('{}\\exclude_idx.mat'.format(folder_path)):
-            bads = np.array(self.ch_names)[loadmat('{}\\exclude_idx.mat'.format(folder_path))['exclude_idx'][0] - 1]
+        
+        exclude_idx_file_path = '{}\\exclude_idx.mat'.format(folder_path)
+        if exists(exclude_idx_file_path):
+            bads = np.array(self.ch_names)[loadmat(exclude_idx_file_path)['exclude_idx'][0] - 1]
             self.info['bads'] = list(bads)
         else:
-            from viz import set_bads
-            set_bads(self)
-        if exists('{}\\P_TARGET_{:d}.mat'.format(folder_path, int(n_chs))):
-            self.forward_full = loadmat('{}\\P_TARGET_{:d}.mat'.format(folder_path, int(n_chs)))['P_TARGET_{:d}'.format(int(n_chs))][0]
+            from . import viz
+            viz.set_bads(self)
+            
+            # Save the indexes to exclude as well as the channels to use for the experiment
+            exclude_idx = np.sort([self.ch_names.index(ch) + 1 for ch in self.info['bads']])
+            data_dict = {"exclude_idx": exclude_idx}
+            savemat(exclude_idx_file_path, data_dict)
+            
+        p_target_file_path = '{}\\P_TARGET_{:d}.mat'.format(folder_path, int(n_chs))
+        if exists(p_target_file_path):
+            self.forward_full = loadmat(p_target_file_path)['P_TARGET_{:d}'.format(int(n_chs))][0]
         else:
             if self.is_stim:
                 raise Exception(
                     'Data with CLAM-tACS was loaded, but no forward model was present in the data folder')
-            from beamformer import set_forward
-            set_forward(self, 1, 30)
-        if exists('{}\\flip.mat'.format(folder_path)):
-            self.flip = loadmat('{}\\flip.mat'.format(folder_path))['flip'][0]
+            
+            from . import beamformer
+            beamformer.set_forward(self, 1, 30)
+            
+            # Save forward model for matlab
+            data_dict = {'P_TARGET_%i'%n_chs: self.forward_full}
+            savemat(p_target_file_path, data_dict)
+        
+        # Save phase delay for matlab? 
+        data_dict = {'phase_delay':0.0}
+        savemat('{}\\phase_delay.mat'.format(folder_path), data_dict)
+
+        flip_file_path = '{}\\flip.mat'.format(folder_path)
+        if exists(flip_file_path):
+            self.flip = loadmat(flip_file_path)['flip'][0]
         else:
             if self.is_stim:
                 raise Exception(
                     'Data with CLAM-tACS was loaded, but no dipole sign flip was present in the data folder')
-            from beamformer import set_flip
-            set_flip(self)
-        self.n_chs = n_chs
+            
+            from . import beamformer
+            beamformer.set_flip(self)
+            
+            # Save flip for matlab
+            data_dict = {'flip':self.flip}
+            savemat(flip_file_path, data_dict)
+        
 
 
 class EpochsCLAM(Epochs):
@@ -189,5 +215,5 @@ class EpochsCLAM(Epochs):
         self.participant = raw.participant
         self.session = raw.session
         self.forward_full = raw.forward_full
-        self.flip = raw.flip
+        if hasattr(raw, 'flip'): self.flip = raw.flip
         self.n_chs = raw.n_chs

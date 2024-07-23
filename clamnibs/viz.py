@@ -7,14 +7,16 @@ from functools import partial
 from .base import RawCLAM, EpochsCLAM
 
 def _onpick_sensor(event, fig, ax, pos, ch_names, bads, scatter):
-    if event.mouseevent.inaxes != ax:
-        return
-    ind = event.ind[0]
-    ch_name = ch_names[ind]
-    if ch_name in bads:
-        bads.remove(ch_name)
-    else:
-        bads.append(ch_name)
+    if event is not None:
+        if event.mouseevent.inaxes != ax:
+            return
+        ind = event.ind[0]
+        ch_name = ch_names[ind]
+        if ch_name in bads:
+            bads.remove(ch_name)
+        else:
+            bads.append(ch_name)
+            
     edgecolors = ['r' if ch in bads else 'k' for ch in ch_names]
     scatter.set_edgecolors(edgecolors)
     fig.canvas.draw()
@@ -102,7 +104,9 @@ def set_bads(obj):
         needed_space = (xmaxs[bad_xmax_ixs] - xmax).max() / xmax
         fig.subplots_adjust(right=1 - 1.1 * needed_space)
 
-    bads = ['Fp1', 'Fpz', 'Fp2', 'F9', 'FT9', 'TP9', 'F10', 'FT10', 'TP10']
+    usual_suspects = ['Fp1', 'Fpz', 'Fp2', 'F9', 'FT9', 'TP9', 'F10', 'FT10', 'TP10'] 
+    bads = [ch for ch in usual_suspects if ch in ch_names]
+    
     picker = partial(
         _onpick_sensor,
         fig=fig,
@@ -113,6 +117,7 @@ def set_bads(obj):
         scatter=scatter
     )
     fig.canvas.mpl_connect("pick_event", picker)
+    picker(None) # call to the update function with a dummy event to force it to draw the initial bad channels
     fig.set_size_inches(10, 12)
     ax.text(
         0.05,
