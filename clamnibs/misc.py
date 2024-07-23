@@ -24,10 +24,10 @@ def _get_main_target_phase(marker_definition, events):
 
 def _get_ixs_goods(obj):
     types = obj.get_channel_types()
-    if not np.all(np.array(types[:64]) == 'eeg'):
-        raise Exception('Data should contain 64 EEG channels, including bads')
+    if not np.all(np.array(types[:obj.n_chs]) == 'eeg'):
+        raise Exception('Data should contain all EEG channels, including bads')
     return [ix for ix, ch in enumerate(
-        obj.ch_names[:64]) if ch not in obj.info['bads']]
+        obj.ch_names[:obj.n_chs]) if ch not in obj.info['bads']]
 
 
 def _wrap(phase):

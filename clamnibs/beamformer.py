@@ -54,7 +54,7 @@ def get_target(obj):
     if isinstance(obj, mne.Epochs):
         epochs_events = obj.events
         epochs_data = obj.get_data(ixs_goods)
-        forward_goods = obj.forward_64[ixs_goods]
+        forward_goods = obj.forward_full[ixs_goods]
         COV = np.mean([np.cov(np.real(np.concatenate(epochs_data[epochs_events[:, 2]
                       == target_code], axis=-1))) for target_code in target_codes], axis=0)
         w = _get_lcmv_weights(COV, forward_goods)
@@ -65,7 +65,7 @@ def get_target(obj):
         epochs = EpochsCLAM(obj)
         epochs_events = epochs.events
         epochs_data = epochs.get_data([ixs_goods])
-        forward_goods = epochs.forward_64[ixs_goods]
+        forward_goods = epochs.forward_full[ixs_goods]
         COV = np.mean([np.cov(np.real(np.concatenate(epochs_data[epochs_events[:, 2]
                       == target_code], axis=-1))) for target_code in target_codes], axis=0)
         w = _get_lcmv_weights(COV, forward_goods)
@@ -115,7 +115,7 @@ def set_flip(obj, plot=False):
     else:
         flip = 1
     if plot:
-        p = binomtest(n_rising, n_rising + n_falling)
+        p = binomtest(n_rising, n_rising + n_falling).pvalue
         _, ax = plt.subplots(1, 1, subplot_kw={'projection': 'polar'})
         ax.hist(target_phases.flatten(), color='k', alpha=0.3)
         ax.set_title('flip = {:d}, p = {:.4f}'.format(flip, p))
@@ -251,9 +251,9 @@ def set_forward(raw, l_freq_noise, h_freq_noise, n_comp=4):
     if ix_comp is None:
         raise Exception(
             'No target for stimulation (forward model) was selected')
-    forward_64 = np.zeros(64)
-    forward_64[ixs_goods] = M[:, int(ix_comp)]
-    raw.forward_64 = forward_64
+    forward_full = np.zeros(raw.n_chs)
+    forward_full[ixs_goods] = M[:, int(ix_comp)]
+    raw.forward_full = forward_full
 
 # from scipy.io import loadmat
 # raw = mne.io.read_raw_brainvision('C:\\Users\\hasla\Desktop\\rising_falling_cwm_tims\\data\\P1_DH\\calibration_no_stim.vhdr',preload=True)

@@ -21,6 +21,8 @@ class RawCLAM(RawBrainVision):
         For 'trial_wise' designs, this is the start time of the trial relative to the target phase marker.
     tmax : float
         For 'trial_wise' designs, this is the end time of the trial relative to the target phase marker.
+    n_chs : int
+        Number of EEG channels in the data (including bads).
     design : str
         The experimental design type.
         'trial_wise' means that multiple phase lags were tested in the session.
@@ -51,6 +53,7 @@ class RawCLAM(RawBrainVision):
             h_freq_target,
             tmin,
             tmax,
+            n_chs=64,
             design='trial_wise',
             ecg_channels=[],
             misc_channels=['envelope',
@@ -94,8 +97,8 @@ class RawCLAM(RawBrainVision):
         else:
             from viz import set_bads
             set_bads(self)
-        if exists('{}\\P_TARGET_64.mat'.format(folder_path)):
-            self.forward_64 = loadmat('{}\\P_TARGET_64.mat'.format(folder_path))['P_TARGET_64'][0]
+        if exists('{}\\P_TARGET_{:d}.mat'.format(folder_path, int(n_chs))):
+            self.forward_full = loadmat('{}\\P_TARGET_{:d}.mat'.format(folder_path, int(n_chs)))['P_TARGET_{:d}'.format(int(n_chs))][0]
         else:
             if self.is_stim:
                 raise Exception(
@@ -110,6 +113,7 @@ class RawCLAM(RawBrainVision):
                     'Data with CLAM-tACS was loaded, but no dipole sign flip was present in the data folder')
             from beamformer import set_flip
             set_flip(self)
+        self.n_chs = n_chs
 
 
 class EpochsCLAM(Epochs):
@@ -144,8 +148,8 @@ class EpochsCLAM(Epochs):
         Participant identifier.
     session : str
         Session identifier.
-    forward_64 : ndarray or None
-        Forward model data for 64 channels.
+    forward_full : ndarray or None
+        Forward model for all EEG channels (with zero for bads).
     flip : integer
         Sign flip for dipole (-1 or 1).
 
@@ -184,5 +188,6 @@ class EpochsCLAM(Epochs):
         self.is_stim = raw.is_stim
         self.participant = raw.participant
         self.session = raw.session
-        self.forward_64 = raw.forward_64
+        self.forward_full = raw.forward_full
         self.flip = raw.flip
+        self.n_chs = raw.n_chs
