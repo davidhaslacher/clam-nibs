@@ -13,23 +13,25 @@ class RawCLAM(RawBrainVision):
     -----------
     path : str
         The path to the BrainVision data file.
+    l_freq_target : float
+        Lower edge of the target frequency range.
+    h_freq_target : float
+        Higher edge of the target frequency range.
+    tmin : float
+        For 'trial_wise' designs, this is the start time of the trial relative to the target phase marker.
+    tmax : float
+        For 'trial_wise' designs, this is the end time of the trial relative to the target phase marker.
     design : str
         The experimental design type.
         'trial_wise' means that multiple phase lags were tested in the session.
         'session_wise' means that a single phase lag was tested in the session (e.g. patient treatment).
     misc_channels : list
         List of miscellaneous channel names (not EEG or ECG).
-    l_freq_target : float
-        Lower edge of the target frequency range.
-    h_freq_target : float
-        Higher edge of the target frequency range.
     marker_definition : dict
         Dictionary containing marker definitions.
         Mapping from target phase markers (e.g. 1 - 6) to target phases [-pi, pi].
-    tmin : float
-        For 'trial_wise' designs, this is the start time of the trial relative to the target phase marker.
-    tmax : float
-        For 'trial_wise' designs, this is the end time of the trial relative to the target phase marker.
+    sfreq : float or None
+        New sampling frequency, or None if the data should not be resampled.
 
     Notes:
     ------
@@ -45,14 +47,25 @@ class RawCLAM(RawBrainVision):
     def __init__(
             self,
             path,
-            design,
-            misc_channels,
             l_freq_target,
             h_freq_target,
-            marker_definition,
             tmin,
-            tmax):
+            tmax,
+            design='trial_wise',
+            ecg_channels=[],
+            misc_channels=['envelope',
+                           'envelope_am'],
+            marker_definition={1: (0 / 6) * 2 * np.pi,
+                               2: (1 / 6) * 2 * np.pi,
+                               3: (2 / 6) * 2 * np.pi,
+                               4: (3 / 6) * 2 * np.pi,
+                               5: (4 / 6) * 2 * np.pi,
+                               6: (5 / 6) * 2 * np.pi},
+            sfreq=None):
         super().__init__(path, preload=True)
+        if sfreq is not None:
+            self.resample(sfreq)
+        self.filter(l_freq_target, h_freq_target, picks=['envelope'])
         folder_path = dirname(path)
         misc_channels = [ch for ch in misc_channels if ch in self.ch_names]
         if 'stim' in path.lower():
@@ -61,7 +74,7 @@ class RawCLAM(RawBrainVision):
             self.is_stim = False
         self.design = design
         self.set_channel_types({
-            **{'ecg': 'ecg'},
+            **{ch: 'ecg' for ch in ecg_channels},
             **{ch: 'misc' for ch in misc_channels}})
         self.l_freq_target = l_freq_target
         self.h_freq_target = h_freq_target
@@ -141,13 +154,17 @@ class EpochsCLAM(Epochs):
     None
     """
     
-    def __init__(self, raw, apply_hil):
+    def __init__(self, raw, apply_hil=True):
+        if not isinstance(raw, RawCLAM):
+            raise Exception(
+                'Please use get_raw to create a RawCLAM object before using get_epochs to create an EpochsCLAM object')
         target_codes = list(raw.marker_definition.keys())
         events = mne.events_from_annotations(raw)[0]
         tmin = raw.tmin
         tmax = raw.tmax
         if apply_hil:
-            raw_out = raw.copy().apply_hilbert(envelope=False)
+            picks = [ch_name for ch_name, ch_type in zip(raw.ch_names, raw.get_channel_types()) if ch_type=='eeg']+['envelope']
+            raw_out = raw.copy().apply_hilbert(picks=picks, envelope=False)
         else:
             raw_out = raw
         super().__init__(
@@ -169,88 +186,3 @@ class EpochsCLAM(Epochs):
         self.session = raw.session
         self.forward_64 = raw.forward_64
         self.flip = raw.flip
-
-
-def get_raw(path,
-            l_freq_target,
-            h_freq_target,
-            tmin,
-            tmax,
-            design='trial_wise',
-            misc_channels=['envelope',
-                           'envelope_am',
-                           'force'],
-            marker_definition={1: (0 / 6) * 2 * np.pi,
-                               2: (1 / 6) * 2 * np.pi,
-                               3: (2 / 6) * 2 * np.pi,
-                               4: (3 / 6) * 2 * np.pi,
-                               5: (4 / 6) * 2 * np.pi,
-                               6: (5 / 6) * 2 * np.pi}):
-    
-    """Get a RawCLAM object.
-
-    This function initializes and returns a RawCLAM object for CLAM-NIBS experiments.
-
-    Parameters:
-    -----------
-    path : str
-        The path to the BrainVision data file.
-    design : str, optional
-        The experimental design type ('trial_wise' or 'session_wise'). Default is 'trial_wise'.
-    misc_channels : list, optional
-        List of miscellaneous channel names. Default is ['envelope', 'envelope_am', 'force'].
-    l_freq_target : float, optional
-        Lower edge of the target frequency range (in Hz). Default is 4.
-    h_freq_target : float, optional
-        Higher edge of the target frequency range (in Hz). Default is 8.
-    marker_definition : dict, optional
-        Dictionary containing marker definitions.
-        Mapping from target phase markers (e.g. 1 - 6) to target phases [-pi, pi].
-        Default represents six equidistant target phases.
-
-    Returns:
-    --------
-    raw : RawCLAM object
-        A RawCLAM object initialized with the provided parameters.
-    """
-    raw = RawCLAM(
-        path,
-        design,
-        misc_channels,
-        l_freq_target,
-        h_freq_target,
-        marker_definition,
-        tmin,
-        tmax)
-    raw.filter(l_freq_target, h_freq_target, picks=['envelope'])
-    return raw
-
-def get_epochs(raw, apply_hil=True):
-    
-    """Get an EpochsCLAM object from a RawCLAM object.
-
-    This function creates an EpochsCLAM object from a RawCLAM object,
-    applying the Hilbert transform by default.
-
-    Parameters:
-    -----------
-    raw : RawCLAM object
-        The RawCLAM object containing EEG data.
-    apply_hil : bool, optional
-        Whether to apply Hilbert transform to obtain analytic signal. Default is True.
-
-    Returns:
-    --------
-    epochs : EpochsCLAM object
-        An EpochsCLAM object initialized with the provided RawCLAM object and optional parameters.
-
-    Raises:
-    -------
-    Exception:
-        If the input `raw` object is not an instance of RawCLAM.
-    """
-    
-    if not isinstance(raw, RawCLAM):
-        raise Exception(
-            'Please use get_raw to create a RawCLAM object before using get_epochs to create an EpochsCLAM object')
-    return EpochsCLAM(raw, apply_hil)

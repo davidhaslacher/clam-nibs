@@ -3,7 +3,6 @@ import numpy as np
 from scipy import linalg
 from mne.filter import next_fast_len
 from scipy.signal import hilbert
-from scipy.stats import binom_test
 from pycircstat.descriptive import mean as circmean
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -17,7 +16,7 @@ from pingouin import circ_corrcl
 from fooof import FOOOF
 from mne.time_frequency import psd_array_welch
 from .misc import _get_ixs_goods, _get_main_target_phase
-from .base import RawCLAM, get_epochs
+from .base import RawCLAM, EpochsCLAM
 from .beamformer import get_target
 
 
@@ -74,7 +73,7 @@ def compute_phase_tracking(raw, plot=False):
     target_phases = list(marker_definition.values())
     target_labels = ['{:d}'.format(int(degrees(x))) for x in target_phases]
     n_targets = len(target_codes)
-    epochs_hil = get_epochs(raw)
+    epochs_hil = EpochsCLAM(raw)
     target_hil = get_target(epochs_hil)
     envelope_hil = epochs_hil.get_data(['envelope']).squeeze()
     for target_code, target_label in zip(target_codes, target_labels):
@@ -208,7 +207,7 @@ def compute_amplitude_modulation(raw, measure='hilbert_amp'):
         raise Exception(
             'Raw object must be filtered into the target frequency range for amplitude estimation based on Hilbert')
     if design == 'trial_wise':
-        epochs = get_epochs(raw)
+        epochs = EpochsCLAM(raw)
         target_hil = get_target(epochs)
     else:
         target_hil = get_target(raw.copy().apply_hilbert())
@@ -310,7 +309,7 @@ def compute_aperiodic_modulation(raw, measure='fooof_ae'):
         raise Exception(
             'Raw object must have a passband of at least 1 - 30 Hz for aperiodic exponent estimation based on FOOOF')
     if design == 'trial_wise':
-        epochs = get_epochs(raw)
+        epochs = EpochsCLAM(raw)
         target_hil = get_target(epochs)
     else:
         target_hil = get_target(raw.copy().apply_hilbert())
@@ -404,7 +403,7 @@ def compute_frequency_modulation(raw, measure='fooof_pf'):
         raise Exception(
             'Raw object must have a passband of at least 1 - 30 Hz for peak frequency estimation based on FOOOF')
     if design == 'trial_wise':
-        epochs = get_epochs(raw)
+        epochs = EpochsCLAM(raw)
         target_hil = get_target(epochs)
     else:
         target_hil = get_target(raw.copy().apply_hilbert())

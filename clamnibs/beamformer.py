@@ -8,15 +8,15 @@ import seaborn as sns
 from .misc import _get_ixs_goods
 from mne.filter import next_fast_len
 from scipy.signal import hilbert
-from scipy.stats import binom_test
+from scipy.stats import binomtest
 from pycircstat.descriptive import mean as circmean
-from .base import RawCLAM, EpochsCLAM, get_epochs
+from .base import RawCLAM, EpochsCLAM
 
 
-def _get_lcmv_weights(COV, forward_64):
+def _get_lcmv_weights(COV, forward):
     COVinv = linalg.pinv(COV)
-    return ((COVinv @ forward_64[:, None])).squeeze() / \
-        (forward_64[None, :] @ COVinv @ forward_64[:, None])
+    return ((COVinv @ forward[:, None])).squeeze() / \
+        (forward[None, :] @ COVinv @ forward[:, None])
 
 
 def get_target(obj):
@@ -54,21 +54,21 @@ def get_target(obj):
     if isinstance(obj, mne.Epochs):
         epochs_events = obj.events
         epochs_data = obj.get_data(ixs_goods)
-        forward_64 = obj.forward_64[ixs_goods]
+        forward_goods = obj.forward_64[ixs_goods]
         COV = np.mean([np.cov(np.real(np.concatenate(epochs_data[epochs_events[:, 2]
                       == target_code], axis=-1))) for target_code in target_codes], axis=0)
-        w = _get_lcmv_weights(COV, forward_64)
+        w = _get_lcmv_weights(COV, forward_goods)
         target = np.array([w @ ep for ep in epochs_data]).squeeze()
     else:
         raw_events = mne.events_from_annotations(obj)[0]
         raw_data = obj.get_data([ixs_goods])
-        epochs = get_epochs(obj)
+        epochs = EpochsCLAM(obj)
         epochs_events = epochs.events
         epochs_data = epochs.get_data([ixs_goods])
-        forward_64 = epochs.forward_64[ixs_goods]
+        forward_goods = epochs.forward_64[ixs_goods]
         COV = np.mean([np.cov(np.real(np.concatenate(epochs_data[epochs_events[:, 2]
                       == target_code], axis=-1))) for target_code in target_codes], axis=0)
-        w = _get_lcmv_weights(COV, forward_64)
+        w = _get_lcmv_weights(COV, forward_goods)
         target = (w @ raw_data).squeeze()
     target *= obj.flip
     return target
@@ -115,7 +115,7 @@ def set_flip(obj, plot=False):
     else:
         flip = 1
     if plot:
-        p = binom_test([n_rising, n_falling])
+        p = binomtest(n_rising, n_rising + n_falling)
         _, ax = plt.subplots(1, 1, subplot_kw={'projection': 'polar'})
         ax.hist(target_phases.flatten(), color='k', alpha=0.3)
         ax.set_title('flip = {:d}, p = {:.4f}'.format(flip, p))
