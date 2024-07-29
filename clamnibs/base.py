@@ -198,4 +198,5 @@ class EpochsCLAM(Epochs):
         self.participant = raw.participant
         self.session = raw.session
         self.forward_full = raw.forward_full
+        self.flip = raw.flip
         self.n_chs = raw.n_chs
