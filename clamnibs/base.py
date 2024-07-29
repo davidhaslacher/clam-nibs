@@ -2,7 +2,7 @@ import mne
 from mne.io.brainvision.brainvision import RawBrainVision
 from os.path import dirname, basename, exists
 import numpy as np
-from scipy.io import loadmat, savemat
+from scipy.io import loadmat
 from mne import Epochs
 
 class RawCLAM(RawBrainVision):
@@ -198,5 +198,4 @@ class EpochsCLAM(Epochs):
         self.participant = raw.participant
         self.session = raw.session
         self.forward_full = raw.forward_full
-        if hasattr(raw, 'flip'): self.flip = raw.flip
         self.n_chs = raw.n_chs

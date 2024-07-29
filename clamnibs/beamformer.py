@@ -70,9 +70,8 @@ def get_target(obj):
                       == target_code], axis=-1))) for target_code in target_codes], axis=0)
         w = _get_lcmv_weights(COV, forward_goods)
         target = (w @ raw_data).squeeze()
-        
-    flip = obj.flip if hasattr(obj, 'flip') else 1
-    target *= flip
+    target *= obj.flip
+
     return target
 
 
@@ -103,6 +102,7 @@ def set_flip(obj, plot=False):
     
     if not (isinstance(obj, RawCLAM) or isinstance(obj, EpochsCLAM)):
         raise Exception('set_flip can only be applied to RawCLAM or EpochsCLAM objects')
+    obj.flip = 1 # required for get_target() to run
     target = get_target(obj)
     is_complex = np.iscomplexobj(target)
     if not is_complex:
