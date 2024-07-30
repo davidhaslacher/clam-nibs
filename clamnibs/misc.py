@@ -8,7 +8,8 @@ import pandas as pd
 from math import degrees
 from pingouin import circ_corrcl
 from statistics import mode
-from .base import RawCLAM
+from .base import RawCLAM, EpochsCLAM
+from scipy.io import savemat
 
 def _get_main_target_phase(marker_definition, events):
     target_codes = marker_definition.keys()
@@ -203,3 +204,25 @@ def compute_rr_modulation(raw):
                               'measure': ['rr_interval'] * len(trial_rrs),
                               'value': trial_rrs})
     return df_result
+    
+def save_calibration_data(obj, folder_path, phase_delay=None):
+    exclude_idx_file_path = '{}\\exclude_idx.mat'.format(folder_path)
+    p_target_file_path = '{}\\P_TARGET_{:d}.mat'.format(folder_path, int(obj.n_chs))
+    flip_file_path = '{}\\flip.mat'.format(folder_path)
+    
+    
+    exclude_idx = np.sort([obj.ch_names.index(ch) + 1 for ch in obj.info["bads"]])
+    data_dict = {"exclude_idx": exclude_idx}
+    savemat(exclude_idx_file_path, data_dict)
+    
+    data_dict = {'P_TARGET_%i'%obj.n_chs:obj.forward_full}
+    savemat(p_target_file_path, data_dict)
+    
+    data_dict = {'flip':obj.flip}
+    savemat(flip_file_path, data_dict)
+    
+    if phase_delay is not None:
+        phase_delay_file_path = '{}\\phase_delay.mat'.format(folder_path)
+        
+        data_dict = {'phase_delay':phase_delay}
+        savemat(phase_delay_file_path, data_dict)

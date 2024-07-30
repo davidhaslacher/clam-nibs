@@ -51,8 +51,8 @@ class RawCLAM(RawBrainVision):
             path,
             l_freq_target,
             h_freq_target,
-            tmin,
-            tmax,
+            tmin = None,
+            tmax = None,
             n_chs=64,
             design='trial_wise',
             ecg_channels=[],
@@ -82,6 +82,12 @@ class RawCLAM(RawBrainVision):
             **{ch: 'misc' for ch in misc_channels}})
         self.l_freq_target = l_freq_target
         self.h_freq_target = h_freq_target
+        
+        if marker_definition:
+            if tmin is None or tmax is None:
+                raise Exception(
+                    'tmin and tmax are required parameters (cannot be None) for epoching data when a marker definition is provided')
+        
         self.marker_definition = marker_definition
         self.tmin = tmin
         self.tmax = tmax
@@ -95,7 +101,11 @@ class RawCLAM(RawBrainVision):
         
         exclude_idx_file_path = '{}\\exclude_idx.mat'.format(folder_path)
         if exists(exclude_idx_file_path):
-            bads = np.array(self.ch_names)[loadmat(exclude_idx_file_path)['exclude_idx'][0] - 1]
+            exclude_idx_mat = loadmat(exclude_idx_file_path)['exclude_idx']
+            if len(exclude_idx_mat) == 0:
+                bads = np.array([])
+            else:
+                bads = np.array(self.ch_names)[exclude_idx_mat[0] - 1]
             self.info['bads'] = list(bads)
         else:
             from . import viz
