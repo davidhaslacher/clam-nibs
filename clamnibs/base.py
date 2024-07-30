@@ -64,7 +64,8 @@ class RawCLAM(RawBrainVision):
                                4: (3 / 6) * 2 * np.pi,
                                5: (4 / 6) * 2 * np.pi,
                                6: (5 / 6) * 2 * np.pi},
-            sfreq=None):
+            sfreq=None,
+            ignore_calibration_files = False):
         super().__init__(path, preload=True)
         self.n_chs = n_chs
         if sfreq is not None:
@@ -100,7 +101,7 @@ class RawCLAM(RawBrainVision):
             self.session = basename(dirname(path))
         
         exclude_idx_file_path = '{}\\exclude_idx.mat'.format(folder_path)
-        if exists(exclude_idx_file_path):
+        if exists(exclude_idx_file_path) and not ignore_calibration_files:
             exclude_idx_mat = loadmat(exclude_idx_file_path)['exclude_idx']
             if len(exclude_idx_mat) == 0:
                 bads = np.array([])
@@ -112,7 +113,7 @@ class RawCLAM(RawBrainVision):
             viz.set_bads(self)
             
         p_target_file_path = '{}\\P_TARGET_{:d}.mat'.format(folder_path, int(n_chs))
-        if exists(p_target_file_path):
+        if exists(p_target_file_path) and not ignore_calibration_files:
             self.forward_full = loadmat(p_target_file_path)['P_TARGET_{:d}'.format(int(n_chs))][0]
         else:
             if self.is_stim:
@@ -123,7 +124,7 @@ class RawCLAM(RawBrainVision):
             beamformer.set_forward(self, 1, 30)
             
         flip_file_path = '{}\\flip.mat'.format(folder_path)
-        if exists(flip_file_path):
+        if exists(flip_file_path) and not ignore_calibration_files:
             self.flip = loadmat(flip_file_path)['flip'][0]
         else:
             if self.is_stim:
