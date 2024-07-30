@@ -61,16 +61,17 @@ def get_target(obj):
         target = np.array([w @ ep for ep in epochs_data]).squeeze()
     else:
         raw_events = mne.events_from_annotations(obj)[0]
-        raw_data = obj.get_data([ixs_goods])
+        raw_data = obj.get_data(ixs_goods)
         epochs = EpochsCLAM(obj)
         epochs_events = epochs.events
-        epochs_data = epochs.get_data([ixs_goods])
+        epochs_data = epochs.get_data(ixs_goods)
         forward_goods = epochs.forward_full[ixs_goods]
         COV = np.mean([np.cov(np.real(np.concatenate(epochs_data[epochs_events[:, 2]
                       == target_code], axis=-1))) for target_code in target_codes], axis=0)
         w = _get_lcmv_weights(COV, forward_goods)
         target = (w @ raw_data).squeeze()
     target *= obj.flip
+
     return target
 
 
@@ -101,7 +102,8 @@ def set_flip(obj, plot=False):
     
     if not (isinstance(obj, RawCLAM) or isinstance(obj, EpochsCLAM)):
         raise Exception('set_flip can only be applied to RawCLAM or EpochsCLAM objects')
-    target = get_target(obj, 1)
+    obj.flip = 1 # required for get_target() to run
+    target = get_target(obj)
     is_complex = np.iscomplexobj(target)
     if not is_complex:
         n_times = target.shape[-1]
@@ -179,11 +181,11 @@ def set_forward(raw, l_freq_noise, h_freq_noise, n_comp=4):
     if not (l_freq <= 1 and 40 <= h_freq):
         raise Exception(
             'Data should contain frequencies of at least 1 - 40 Hz')
-    data_broad = raw.copy().filter(1, 40).get_data([ixs_goods])
+    data_broad = raw.copy().filter(1, 40).get_data(ixs_goods)
     data_signal = raw.copy().filter(
-        l_freq_target, h_freq_target).get_data([ixs_goods])
+        l_freq_target, h_freq_target).get_data(ixs_goods)
     data_noise = raw.copy().filter(
-        l_freq_noise, h_freq_noise).get_data([ixs_goods])
+        l_freq_noise, h_freq_noise).get_data(ixs_goods)
     COV_B = np.cov(data_broad)
     COV_S = np.cov(data_signal)
     COV_N = np.cov(data_noise)
@@ -200,14 +202,15 @@ def set_forward(raw, l_freq_noise, h_freq_noise, n_comp=4):
         w = _get_lcmv_weights(COV_B, M[:, ix_comp])
         psd, freqs = psd_array_welch(
             w @ data_broad, raw.info['sfreq'], fmin=1, fmax=40, n_fft=int(3 * raw.info['sfreq']))
-        axes[ix_comp, 0].semilogy(freqs, psd, c='k')
+        axes[ix_comp, 0].semilogy(freqs, psd.flatten(), c='k')
         axes[ix_comp, 0].tick_params(axis='x', labelsize=8)
         axes[ix_comp, 0].tick_params(axis='y', labelsize=5)
         axes[ix_comp, 0].axvline(
             l_freq_target, color='grey', linestyle='--', linewidth=0.5)
         axes[ix_comp, 0].axvline(
             h_freq_target, color='grey', linestyle='--', linewidth=0.5)
-        plot_topomap(M[:, ix_comp], raw.info, axes=axes[ix_comp,
+        
+        plot_topomap(M[:, ix_comp], mne.pick_info(raw.info, ixs_goods), axes=axes[ix_comp,
                      1], sensors=False, contours=0, show=False)
     plt.suptitle(
         'Please select a target for stimulation by clicking anywhere inside the left plot')
