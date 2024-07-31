@@ -100,7 +100,7 @@ class RawCLAM(RawBrainVision):
             self.participant = basename(dirname(dirname(path)))
             self.session = basename(dirname(path))
         
-        exclude_idx_file_path = '{}\\exclude_idx.mat'.format(folder_path)
+        exclude_idx_file_path = '{}/exclude_idx.mat'.format(folder_path)
         if exists(exclude_idx_file_path) and not ignore_calibration_files:
             exclude_idx_mat = loadmat(exclude_idx_file_path)['exclude_idx']
             if len(exclude_idx_mat) == 0:
@@ -112,7 +112,7 @@ class RawCLAM(RawBrainVision):
             from . import viz
             viz.set_bads(self)
             
-        p_target_file_path = '{}\\P_TARGET_{:d}.mat'.format(folder_path, int(n_chs))
+        p_target_file_path = '{}/P_TARGET_{:d}.mat'.format(folder_path, int(n_chs))
         if exists(p_target_file_path) and not ignore_calibration_files:
             self.forward_full = loadmat(p_target_file_path)['P_TARGET_{:d}'.format(int(n_chs))][0]
         else:
@@ -123,7 +123,7 @@ class RawCLAM(RawBrainVision):
             from . import beamformer
             beamformer.set_forward(self, 1, 30)
             
-        flip_file_path = '{}\\flip.mat'.format(folder_path)
+        flip_file_path = '{}/flip.mat'.format(folder_path)
         if exists(flip_file_path) and not ignore_calibration_files:
             self.flip = loadmat(flip_file_path)['flip'][0]
         else:
