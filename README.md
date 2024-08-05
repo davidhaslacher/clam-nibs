@@ -10,5 +10,6 @@ Although invasive brain stimulation can be effective in treating certain conditi
 These issues can be addressed with non-invasive brain stimulation approaches, like transcranial magnetic stimulation. No surgery is required, and therefore, infection and bleeding are avoided. These methods are also often less expensive compared to implanted devices. Furthermore, these methods can be easily adjusted or discontinued.
 
 ## Why closed-loop?
+Closed-loop approaches can make non-invasive brain stimulation significantly more effective. Closed-loop approaches enable the synchronization of the stimulation with specific brain states. For instance, the phase of the stimulation can be dynamically adjusted to the brain state. In addition, closed-loop brain stimulation can also improve personalized targeting of specific brain states, making this approach more precise than traditional open-loop brain stimulation.
 
 ## Why amplitude-modulated?
