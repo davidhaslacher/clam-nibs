@@ -13,3 +13,4 @@ These issues can be addressed with non-invasive brain stimulation approaches, li
 Closed-loop approaches can make non-invasive brain stimulation significantly more effective. Closed-loop approaches enable the synchronization of the stimulation with specific brain states. For instance, the phase of the stimulation can be dynamically adjusted to the brain state. In addition, closed-loop brain stimulation can also improve personalized targeting of specific brain states, making this approach more precise than traditional open-loop brain stimulation.
 
 ## Why amplitude-modulated?
+Amplitude-modulated brain stimulation is a technique that combines a high-frequency carrier signal with low-frequency amplitude modulation. The primary advantage of amplitude-modulated brain stimulation is the easier removal of stimulation artifacts. This is crucial in closed-loop brain non-invasive stimulation, as it enables more accurate recording of brain states during stimulation.
