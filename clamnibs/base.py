@@ -17,10 +17,12 @@ class RawCLAM(RawBrainVision):
         Lower edge of the target frequency range.
     h_freq_target : float
         Higher edge of the target frequency range.
-    tmin : float
+    tmin : float or None
         For 'trial_wise' designs, this is the start time of the trial relative to the target phase marker.
-    tmax : float
+        Required paramter when trigger markers are provided (e.g. marker_definition != {}).
+    tmax : float or None
         For 'trial_wise' designs, this is the end time of the trial relative to the target phase marker.
+        Required paramter when trigger markers are provided (e.g. marker_definition != {}).
     n_chs : int
         Number of EEG channels in the data (including bads).
     design : str
@@ -34,6 +36,10 @@ class RawCLAM(RawBrainVision):
         Mapping from target phase markers (e.g. 1 - 6) to target phases [-pi, pi].
     sfreq : float or None
         New sampling frequency, or None if the data should not be resampled.
+    
+    ignore_calibration_files: bool
+        if True, the user will be prompted to select bad channels and target spatial component regardless
+        of the presence of calibration (.mat) files in the data folder
 
     Notes:
     ------
