@@ -2,7 +2,7 @@ import numpy as np
 from scipy import linalg
 import mne
 from scipy.signal import hilbert
-from misc import pli
+from . import misc
 from mne.stats import permutation_cluster_test
 from scipy.sparse import coo_matrix
 import scipy
@@ -76,37 +76,41 @@ def clean_sensor_data(obj_no_stim, obj_stim):
     if not (l_freq == l_freq_target and h_freq == h_freq_target):
         raise Exception(
             'Data must be filtered into the target frequency range to apply SASS')
-    if isinstance(obj_stim, mne.Raw):
-        A = np.cov(obj_stim.get_data([ixs_goods]))
+        
+    if isinstance(obj_stim, RawCLAM):
+        A = np.cov(obj_stim.get_data(ixs_goods))
     else:
         A = np.cov(
             np.concatenate(
-                obj_stim.get_data([ixs_goods]),
+                obj_stim.get_data(ixs_goods),
                 axis=-1))
-    if isinstance(obj_no_stim, mne.Raw):
-        B = np.cov(obj_no_stim.get_data([ixs_goods]))
+        
+    if isinstance(obj_no_stim, RawCLAM):
+        B = np.cov(obj_no_stim.get_data(ixs_goods))
     else:
         B = np.cov(
             np.concatenate(
-                obj_no_stim.get_data([ixs_goods]),
+                obj_no_stim.get_data(ixs_goods),
                 axis=-1))
+    
     eigen_values, eigen_vectors = linalg.eig(A, B)
     eigen_values = eigen_values.real
     eigen_vectors = eigen_vectors.real
     ix = np.argsort(eigen_values)[::-1]
     D = eigen_vectors[:, ix].T
-    M = linalg.pinv2(D)
+    M = linalg.pinv(D)
     n_nulls = _find_n_nulls(A, B, D, M)
     DI = np.ones(M.shape[0])
     DI[:n_nulls] = 0
     DI = np.diag(DI)
     P = M.dot(DI).dot(D)
 
-    if isinstance(obj_stim, mne.Raw):
+    if isinstance(obj_stim, RawCLAM):
         obj_stim._data[ixs_goods] = P @ obj_stim._data[ixs_goods]
     else:
         obj_stim._data[:, ixs_goods] = np.array(
             [P @ epoch for epoch in obj_stim._data[:, ixs_goods]])
+    
     obj_stim.interpolate_bads(reset_bads=True)
 
 
@@ -179,7 +183,7 @@ def compute_connectivity(obj, measure='phase_lag_index'):
         conn = np.zeros((n_chs, n_chs))
         for ix1 in range(n_chs):
             for ix2 in range(ix1 + 1, n_chs):
-                conn[ix1, ix2] = pli(phase[ix1], phase[ix2])
+                conn[ix1, ix2] = misc.pli(phase[ix1], phase[ix2])
         conn += conn.T
         conn += np.diag(np.ones(n_chs))
         conns.append(conn)

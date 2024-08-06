@@ -62,12 +62,18 @@ def get_target(obj):
     else:
         raw_events = mne.events_from_annotations(obj)[0]
         raw_data = obj.get_data(ixs_goods)
-        epochs = EpochsCLAM(obj)
-        epochs_events = epochs.events
-        epochs_data = epochs.get_data(ixs_goods)
-        forward_goods = epochs.forward_full[ixs_goods]
-        COV = np.mean([np.cov(np.real(np.concatenate(epochs_data[epochs_events[:, 2]
-                      == target_code], axis=-1))) for target_code in target_codes], axis=0)
+        
+        if obj.marker_definition:
+            epochs = EpochsCLAM(obj)
+            epochs_events = epochs.events
+            epochs_data = epochs.get_data(ixs_goods)
+            forward_goods = epochs.forward_full[ixs_goods]
+            COV = np.mean([np.cov(np.real(np.concatenate(epochs_data[epochs_events[:, 2]
+                        == target_code], axis=-1))) for target_code in target_codes], axis=0)
+        else:
+            forward_goods = obj.forward_full[ixs_goods]
+            COV = np.cov(raw_data)
+            
         w = _get_lcmv_weights(COV, forward_goods)
         target = (w @ raw_data).squeeze()
     target *= obj.flip
