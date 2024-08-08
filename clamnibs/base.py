@@ -12,34 +12,35 @@ class RawCLAM(RawBrainVision):
     Parameters:
     -----------
     path : str
-        The path to the BrainVision data file.
+        The path to the BrainVision header file (.vhdr).
     l_freq_target : float
         Lower edge of the target frequency range.
     h_freq_target : float
         Higher edge of the target frequency range.
-    tmin : float or None
+    tmin : float or None, optional
         For 'trial_wise' designs, this is the start time of the trial relative to the target phase marker.
         Required paramter when trigger markers are provided (e.g. marker_definition != {}).
-    tmax : float or None
+    tmax : float or None, optional
         For 'trial_wise' designs, this is the end time of the trial relative to the target phase marker.
         Required paramter when trigger markers are provided (e.g. marker_definition != {}).
-    n_chs : int
+    n_chs : int, optional
         Number of EEG channels in the data (including bads).
-    design : str
+    design : str, optional
         The experimental design type.
         'trial_wise' means that multiple phase lags were tested in the session.
         'session_wise' means that a single phase lag was tested in the session (e.g. patient treatment).
-    misc_channels : list
+    misc_channels : list, optional
         List of miscellaneous channel names (not EEG or ECG).
-    marker_definition : dict
+    marker_definition : dict, optional
         Dictionary containing marker definitions.
         Mapping from target phase markers (e.g. 1 - 6) to target phases [-pi, pi].
-    sfreq : float or None
+    sfreq : float or None, optional
         New sampling frequency, or None if the data should not be resampled.
-    
-    ignore_calibration_files: bool
-        if True, the user will be prompted to select bad channels and target spatial component regardless
+    ignore_calibration_files: bool, optional
+        If True, the user will be prompted to select bad channels and target spatial component regardless
         of the presence of calibration (.mat) files in the data folder
+    default_bads : list of str, optional
+        The user may specify the list of channels that are marked bad by default in viz.set_bads
 
     Notes:
     ------
@@ -71,7 +72,8 @@ class RawCLAM(RawBrainVision):
                                5: (4 / 6) * 2 * np.pi,
                                6: (5 / 6) * 2 * np.pi},
             sfreq=None,
-            ignore_calibration_files = False):
+            ignore_calibration_files = False,
+            default_bads=['Fp1', 'Fpz', 'Fp2', 'F9', 'FT9', 'TP9', 'F10', 'FT10', 'TP10']):
         super().__init__(path, preload=True)
         self.n_chs = n_chs
         if sfreq is not None:
@@ -116,7 +118,7 @@ class RawCLAM(RawBrainVision):
             self.info['bads'] = list(bads)
         else:
             from . import viz
-            viz.set_bads(self)
+            viz.set_bads(self, default_bads)
             
         p_target_file_path = join(folder_path, 'P_TARGET_{:d}.mat'.format(int(n_chs)))
         if exists(p_target_file_path) and not ignore_calibration_files:

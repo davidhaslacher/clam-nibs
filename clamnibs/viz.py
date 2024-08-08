@@ -22,7 +22,7 @@ def _onpick_sensor(event, fig, ax, pos, ch_names, bads, scatter):
     fig.canvas.draw()
 
 
-def set_bads(obj):
+def set_bads(obj, default_bads):
     
     """Interactive tool to mark bad channels in EEG data.
 
@@ -34,6 +34,8 @@ def set_bads(obj):
     -----------
     obj : RawCLAM or EpochsCLAM object
         The RawCLAM or EpochsCLAM object containing EEG data.
+    default_bads: list of str
+        The channels that are marked bad by default
 
     Raises:
     -------
@@ -104,8 +106,7 @@ def set_bads(obj):
         needed_space = (xmaxs[bad_xmax_ixs] - xmax).max() / xmax
         fig.subplots_adjust(right=1 - 1.1 * needed_space)
 
-    usual_suspects = ['Fp1', 'Fpz', 'Fp2', 'F9', 'FT9', 'TP9', 'F10', 'FT10', 'TP10'] 
-    bads = [ch for ch in usual_suspects if ch in ch_names]
+    bads = [ch for ch in default_bads if ch in ch_names]
     
     picker = partial(
         _onpick_sensor,

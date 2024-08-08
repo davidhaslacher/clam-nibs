@@ -10,6 +10,7 @@ from pingouin import circ_corrcl
 from statistics import mode
 from .base import RawCLAM, EpochsCLAM
 from scipy.io import savemat
+import warnings
 
 def _get_main_target_phase(marker_definition, events):
     target_codes = marker_definition.keys()
@@ -43,7 +44,7 @@ def _pli(phase1, phase2):
     return np.mean(np.sign(_wrap(phase1 - phase2)))
 
 
-def _get_trial_target_codes_errors(raw):
+def _get_trial_target_codes_cwm_performance(raw):
     events = mne.events_from_annotations(raw)[0]
     n_events = len(events)
     target_codes = raw.marker_definition.keys()
@@ -70,53 +71,84 @@ def _get_trial_target_codes_errors(raw):
         trial_target_codes), np.array(trial_errors)
     return trial_target_codes, trial_errors
 
-def compute_wm_error_modulation(raw, measure='cwm_error'):
+def _get_trial_target_codes_binary_performance(raw, correct_codes, incorrect_codes):
+    events = mne.events_from_annotations(raw)[0]
+    n_events = len(events)
+    target_codes = raw.marker_definition.keys()
+    trial_target_codes = []
+    trial_corrects = []
+    for ix_event in range(n_events):
+        event = events[ix_event]
+        if event[2] in target_codes:
+            for ix_event_post in range(ix_event+1, n_events):
+                event_post = events[ix_event_post]
+                if event_post[2] in correct_codes:
+                    trial_target_codes.append(event[2])
+                    trial_corrects.append(1)
+                    break
+                if event_post[2] in incorrect_codes:
+                    trial_target_codes.append(event[2])
+                    trial_corrects.append(0)
+                    break
+                if event_post[2] in target_codes:
+                    warnings.warn("A target event code marking a trial was found \
+                                  without a following correct/incorrect marker", UserWarning)
+                    break
+    trial_target_codes, trial_corrects = np.array(
+        trial_target_codes), np.array(trial_corrects)
+    return trial_target_codes, trial_corrects
+
+def compute_performance_modulation(raw, measure='binary', correct_codes=[10], incorrect_codes=[11, 12]):
     
     """
-    Compute the phase-lag dependent modulation of behavioral error by CLAM-NIBS 
-    in the continous working memory (WM) task.
+    Compute the phase-lag dependent modulation of task performance by CLAM-NIBS 
+    in an any task with trial-by-trial responses.
 
     Parameters:
     -----------
     raw : RawCLAM
         The RawCLAM object containing the raw data to analyze.
     measure : str, optional
-        The method used to compute working memory error. It can only be 'cwm_error' (default).
+        The method used to compute task performance. Either 'binary' (default) or 'cwm'.
 
     Returns:
     --------
     pandas.DataFrame
-        A DataFrame containing the computed WM error values for each trial.
+        A DataFrame containing the computed performance values for each trial.
 
     Raises:
     -------
     Exception
         If the input raw data is not of type RawCLAM.
-        If the modulation of WM error is attempted on data without CLAM-tACS stimulation.
+        If the modulation of task performance is attempted on data without CLAM-tACS stimulation.
         
     Notes:
     ------
     - This function only works if the data contains a target phase marker at the beginning of each trial.
     """
     
-    if measure not in ['cwm_error']:
+    if measure not in ['binary', 'cwm']:
         raise Exception(
-            'Method to compute working memory error must be \'cwm_error\'')
+            'Method to compute working memory error must be \'binary\' or \'cwm\'')
     
     if not isinstance(raw, RawCLAM):
-        raise Exception('compute_wm_error_modulation can only be applied to RawCLAM objects')
+        raise Exception('compute_performance_modulation can only be applied to RawCLAM objects')
     marker_definition = raw.marker_definition
     participant = raw.participant
     session = raw.session
     design = raw.design
     if not raw.is_stim:
         raise Exception(
-            'Modulation of WM error can only be computed on data with CLAM-tACS')
+            'Modulation of performance can only be computed on data with CLAM-tACS')
     target_codes = list(marker_definition.keys())
     target_phases = list(marker_definition.values())
     target_labels = ['{:d}'.format(int(degrees(x))) for x in target_phases]
     n_targets = len(target_codes)
-    trial_target_codes, trial_errors = _get_trial_target_codes_errors(raw)
+    match measure:
+        case 'binary':
+            trial_target_codes, trial_errors = _get_trial_target_codes_binary_performance(raw, correct_codes, incorrect_codes)
+        case 'cwm':
+            trial_target_codes, trial_errors = _get_trial_target_codes_cwm_performance(raw)
     trial_errors = np.abs(trial_errors)
     trial_target_phases = np.vectorize(
         marker_definition.get)(trial_target_codes)

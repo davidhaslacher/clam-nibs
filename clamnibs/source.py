@@ -128,7 +128,7 @@ def _get_fooof_amplitude(
         h_freq,
         l_freq_target,
         h_freq_target):
-    psd, freqs = psd_array_welch(data, sfreq, l_freq, h_freq, int(2.5 * sfreq))
+    psd, freqs = psd_array_welch(data, sfreq, l_freq, h_freq, data.shape[-1])
     fm = FOOOF(verbose=False)
     fm.fit(freqs, psd)
     peak_params = fm.get_results().peak_params
@@ -254,7 +254,7 @@ def _get_fooof_exponent(
         h_freq,
         l_freq_target,
         h_freq_target):
-    psd, freqs = psd_array_welch(data, sfreq, l_freq, h_freq, int(2.5 * sfreq))
+    psd, freqs = psd_array_welch(data, sfreq, l_freq, h_freq, data.shape[-1])
     fm = FOOOF(verbose=False)
     fm.fit(freqs, psd)
     ap = fm.get_results().aperiodic_params[-1]
@@ -345,7 +345,7 @@ def _get_fooof_frequency(
         h_freq,
         l_freq_target,
         h_freq_target):
-    psd, freqs = psd_array_welch(data, sfreq, l_freq, h_freq, int(2.5 * sfreq))
+    psd, freqs = psd_array_welch(data, sfreq, l_freq, h_freq, data.shape[-1])
     fm = FOOOF(verbose=False)
     fm.fit(freqs, psd)
     peak_params = fm.get_results().peak_params

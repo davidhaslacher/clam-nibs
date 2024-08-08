@@ -23,17 +23,17 @@ import matplotlib
 
 def _dft(x, plot_sine=False):
     n_bins = len(x)
-    phases = np.linspace(0,2*np.pi,n_bins,endpoint=False)
+    phases = np.linspace(0, 2*np.pi, n_bins, endpoint=False)
     c = (x*np.exp(-1j*phases)).sum()*2/n_bins
     amp, phase = np.abs(c), _wrap(np.angle(c))
     if plot_sine:
         n_bins = len(x)
-        xs = np.linspace(-0.5,n_bins-0.5,50)
+        xs = np.linspace(-0.5, n_bins-0.5, 50)
         phases_xs = xs*2*np.pi/n_bins
         dy = np.mean(x)
-        phases = np.linspace(phases_xs[0],phases_xs[-1],50)
-        ys = amp*np.cos(phases+phase)+dy
-        plt.plot(xs,ys,c='k')
+        phases = np.linspace(phases_xs[0], phases_xs[-1],50)
+        ys = amp*np.cos(phases + phase)+dy
+        plt.plot(xs, ys, c='k', linewidth=3)
     return amp, phase
 
 def _vectorized_dft_amp(args):
@@ -542,6 +542,7 @@ def test_modulation(
         df_data,
         test_level='participant',
         measure='amplitude',
+        agg_func=np.mean,
         plot=False):
     
     """Test phase-dependent modulation of arbitrary outcome measure (e.g. amplitude).
@@ -561,6 +562,9 @@ def test_modulation(
     measure : str, optional (default='amplitude')
         The outcome measure employed.
         
+    agg_func : callable, optimal (default=np.mean)
+        The function used to aggregate across trials within each phase bin (e.g. np.mean or np.std).
+        
     plot : str or bool, optional (default=False)
         If string, the plot(s) will be saved at that path.
         If True, a figure will be created but not shown or saved.
@@ -574,16 +578,16 @@ def test_modulation(
     
     df_data = df_data[df_data['measure'] == measure]
     if test_level == 'participant':
-        _test_modulation_participant(df_data, measure, plot)
+        _test_modulation_participant(df_data, measure, agg_func, plot)
     elif test_level == 'group':
         df_data = df_data.groupby('participant')['value'].mean()
-        _test_modulation_group(df_data, measure, plot)
+        _test_modulation_group(df_data, measure, agg_func, plot)
     else:
         raise Exception(
             'Test level should be either \'participant\' or \'group\'')
 
 
-def _test_modulation_participant(df_data, measure, plot):
+def _test_modulation_participant(df_data, measure, agg_func, plot):
     df_results = pd.DataFrame()
     participants = df_data['participant'].unique()
     for participant in participants:
@@ -599,7 +603,7 @@ def _test_modulation_participant(df_data, measure, plot):
             tval_unit = 'ttest_ind'
         else:
             res = permutation_test(target_measures,
-                                   lambda *x: _dft(np.array([x_.mean() for x_ in x]))[0],
+                                   lambda *x: _dft(np.array([agg_func(x_) for x_ in x]))[0],
                                    permutation_type='independent',
                                    alternative='greater',
                                    n_resamples=1000)
@@ -626,7 +630,8 @@ def _test_modulation_participant(df_data, measure, plot):
                 df_plot,
                 x='Target Phase (°)',
                 y='{}'.format(measure),
-                color='r')
+                color='r',
+                alpha=0.8)
             _dft(np.array([x_.mean() for x_ in target_measures]))
             if len(target_phases) == 2:
                 plt.title('t = {:.3e}, p = {:.3e}'.format(tval, pval))
@@ -651,7 +656,7 @@ def _test_modulation_participant(df_data, measure, plot):
     return df_results
 
 
-def _test_modulation_group(df_data, measure, plot):
+def _test_modulation_group(df_data, measure, agg_func, plot):
     gb_target_phase = df_data.groupby('target_phase')
     target_phases = []
     target_measures = []
@@ -663,7 +668,7 @@ def _test_modulation_group(df_data, measure, plot):
         tval_unit = 'ttest_ind'
     else:
         res = permutation_test(target_measures,
-                                lambda *x: _dft(np.array([x_.mean() for x_ in x]))[0],
+                                lambda *x: _dft(np.array([agg_func(x_) for x_ in x]))[0],
                                 permutation_type='independent',
                                 alternative='greater',
                                 n_resamples=1000)
@@ -689,7 +694,8 @@ def _test_modulation_group(df_data, measure, plot):
             df_plot,
             x='Target Phase (°)',
             y='{}'.format(measure),
-            color='r')
+            color='r',
+            alpha=0.8)
         if len(target_phases) == 2:
             plt.title('t = {:.3e}, p = {:.3e}'.format(tval, pval))
         else:
