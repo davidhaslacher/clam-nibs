@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: clamnibs
-Version: 0.1.6
+Version: 0.1.7
 Summary: Analysis of closed-loop amplitude-modulated non-invasive brain stimulation experiments
 Home-page: https://github.com/davidhaslacher/clam-nibs
 Author: David Haslacher
@@ -21,5 +21,6 @@ Requires-Dist: scipy>=1.14.0
 Requires-Dist: seaborn>=0.13.2
 Requires-Dist: setuptools>=69.0.3
 Requires-Dist: pynose>=1.5.2
+Requires-Dist: python>=3.10
 
 This toolbox contains all software required to implement closed-loop amplitude-modulated non-invasive brain stimulation (CLAM-NIBS) and evaluate the resulting electroencephalography (EEG) or magnetoencephalography (MEG) data.
