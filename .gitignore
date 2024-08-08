@@ -1,0 +1,9 @@
+# Python build directories
+build/
+dist/
+*.egg-info/
+*.egg
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
