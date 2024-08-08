@@ -89,10 +89,8 @@ def compute_phase_tracking(raw, plot=False):
     mean_actual_phases = [_wrap(circmean(df_phase.groupby('Target Phase').get_group(
         target_labels[ix])['Actual Phase'].to_numpy())) for ix in range(n_targets)]
     if plot:
-        max_subplots_per_row = 3
-        n_rows = n_targets // max_subplots_per_row + \
-            min(1, n_targets % max_subplots_per_row)
-        n_cols = min(n_targets, max_subplots_per_row)
+        n_cols = int(np.ceil(np.sqrt(n_targets)))
+        n_rows = int(np.ceil(n_targets / n_cols))     
         fig, axs = plt.subplots(n_rows, n_cols, figsize=(
             4 * n_rows, 4 * n_cols), subplot_kw={'projection': 'polar'})
         axs = axs.flatten()
@@ -114,8 +112,11 @@ def compute_phase_tracking(raw, plot=False):
             axs[ix].yaxis.grid(False)
             axs[ix].xaxis.grid(False)
             axs[ix].get_yaxis().set_visible(False)
+        for ix in range(n_targets, len(axs)):
+            fig.delaxes(axs[ix])
         plt.legend()
         plt.suptitle('Actual Phase')
+        plt.tight_layout()
     phase_delay = circmean(
         [tp - ap for tp, ap in zip(target_phases, mean_actual_phases)])
     return phase_delay
