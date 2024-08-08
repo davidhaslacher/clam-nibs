@@ -11,6 +11,7 @@ from statistics import mode
 from .base import RawCLAM, EpochsCLAM
 from scipy.io import savemat
 import warnings
+from scipy.stats import zscore
 
 def _get_main_target_phase(marker_definition, events):
     target_codes = marker_definition.keys()
@@ -44,7 +45,7 @@ def _pli(phase1, phase2):
     return np.mean(np.sign(_wrap(phase1 - phase2)))
 
 
-def _get_trial_target_codes_cwm_performance(raw):
+def _get_trial_target_codes_cwm_error(raw):
     events = mne.events_from_annotations(raw)[0]
     n_events = len(events)
     target_codes = raw.marker_definition.keys()
@@ -71,12 +72,12 @@ def _get_trial_target_codes_cwm_performance(raw):
         trial_target_codes), np.array(trial_errors)
     return trial_target_codes, trial_errors
 
-def _get_trial_target_codes_binary_performance(raw, correct_codes, incorrect_codes):
+def _get_trial_target_codes_binary_accuracy(raw, correct_codes, incorrect_codes):
     events = mne.events_from_annotations(raw)[0]
     n_events = len(events)
     target_codes = raw.marker_definition.keys()
     trial_target_codes = []
-    trial_corrects = []
+    trial_accuracies = []
     for ix_event in range(n_events):
         event = events[ix_event]
         if event[2] in target_codes:
@@ -84,25 +85,25 @@ def _get_trial_target_codes_binary_performance(raw, correct_codes, incorrect_cod
                 event_post = events[ix_event_post]
                 if event_post[2] in correct_codes:
                     trial_target_codes.append(event[2])
-                    trial_corrects.append(1)
+                    trial_accuracies.append(1)
                     break
                 if event_post[2] in incorrect_codes:
                     trial_target_codes.append(event[2])
-                    trial_corrects.append(0)
+                    trial_accuracies.append(0)
                     break
                 if event_post[2] in target_codes:
                     warnings.warn("A target event code marking a trial was found \
                                   without a following correct/incorrect marker", UserWarning)
                     break
-    trial_target_codes, trial_corrects = np.array(
-        trial_target_codes), np.array(trial_corrects)
-    return trial_target_codes, trial_corrects
+    trial_target_codes, trial_accuracies = np.array(
+        trial_target_codes), np.array(trial_accuracies)
+    return trial_target_codes, trial_accuracies
 
-def compute_performance_modulation(raw, measure='binary', correct_codes=[10], incorrect_codes=[11, 12]):
+def compute_single_trial_behavior(raw, measure='binary_accuracy', correct_codes=[10], incorrect_codes=[11, 12]):
     
     """
-    Compute the phase-lag dependent modulation of task performance by CLAM-NIBS 
-    in an any task with trial-by-trial responses.
+    Compute single-trial task performance and assign it to CLAM-NIBS target phase.
+    Applicable to any task with trial-by-trial responses.
 
     Parameters:
     -----------
@@ -114,7 +115,7 @@ def compute_performance_modulation(raw, measure='binary', correct_codes=[10], in
     Returns:
     --------
     pandas.DataFrame
-        A DataFrame containing the computed performance values for each trial.
+        A DataFrame containing the computed performance values and CLAM-NIBS target phase for each trial.
 
     Raises:
     -------
@@ -127,48 +128,48 @@ def compute_performance_modulation(raw, measure='binary', correct_codes=[10], in
     - This function only works if the data contains a target phase marker at the beginning of each trial.
     """
     
-    if measure not in ['binary', 'cwm']:
+    if measure not in ['binary_accuracy', 'cwm_error']:
         raise Exception(
-            'Method to compute working memory error must be \'binary\' or \'cwm\'')
+            'Method to compute working memory error must be \'binary_accuracy\' or \'cwm_error\'')
     
     if not isinstance(raw, RawCLAM):
-        raise Exception('compute_performance_modulation can only be applied to RawCLAM objects')
+        raise Exception('compute_single_trial_behavior can only be applied to RawCLAM objects')
     marker_definition = raw.marker_definition
     participant = raw.participant
     session = raw.session
     design = raw.design
     if not raw.is_stim:
         raise Exception(
-            'Modulation of performance can only be computed on data with CLAM-tACS')
+            'Single-trial performance with target phases can only be computed on data with CLAM-NIBS')
     target_codes = list(marker_definition.keys())
     target_phases = list(marker_definition.values())
     target_labels = ['{:d}'.format(int(degrees(x))) for x in target_phases]
     n_targets = len(target_codes)
     match measure:
-        case 'binary':
-            trial_target_codes, trial_errors = _get_trial_target_codes_binary_performance(raw, correct_codes, incorrect_codes)
-        case 'cwm':
-            trial_target_codes, trial_errors = _get_trial_target_codes_cwm_performance(raw)
-    trial_errors = np.abs(trial_errors)
+        case 'binary_accuracy':
+            trial_target_codes, trial_values = _get_trial_target_codes_binary_accuracy(raw, correct_codes, incorrect_codes)
+        case 'cwm_error':
+            trial_target_codes, trial_values = _get_trial_target_codes_cwm_error(raw)
+    trial_values = np.abs(trial_values)
     trial_target_phases = np.vectorize(
         marker_definition.get)(trial_target_codes)
     if design == 'session_wise':
         main_trial_code = mode(trial_target_codes)
         mask = trial_target_codes == main_trial_code
         trial_target_codes = trial_target_codes[mask]
-        trial_errors = trial_errors[mask]
-    df_result = pd.DataFrame({'participant': [participant] * len(trial_errors),
-                              'session': [session] * len(trial_errors),
-                              'design': [design] * len(trial_errors),
+        trial_values = trial_values[mask]
+    df_result = pd.DataFrame({'participant': [participant] * len(trial_values),
+                              'session': [session] * len(trial_values),
+                              'design': [design] * len(trial_values),
                               'target_phase': trial_target_phases,
-                              'measure': [measure] * len(trial_errors),
-                              'value': trial_errors})
+                              'measure': [measure] * len(trial_values),
+                              'value': trial_values})
     return df_result
 
-def compute_rr_modulation(raw):
+def compute_single_trial_rr(raw):
     
     """
-    Compute the phase-lag dependent modulation of heart rate (RR-intervals) by CLAM-NIBS.
+    Compute single-trial RR-intervals and assign them to CLAM-NIBS target phase.
 
     Parameters:
     -----------
@@ -178,7 +179,7 @@ def compute_rr_modulation(raw):
     Returns:
     --------
     pandas.DataFrame
-        A DataFrame containing the computed RR interval modulation values for each trial.
+        A DataFrame containing the computed RR intervals and CLAM-NIBS target phases.
 
     Raises:
     -------
@@ -188,7 +189,7 @@ def compute_rr_modulation(raw):
     """
     
     if not isinstance(raw, RawCLAM):
-        raise Exception('compute_rr_modulation can only be applied to RawCLAM objects')
+        raise Exception('compute_single_trial_rr can only be applied to RawCLAM objects')
     marker_definition = raw.marker_definition
     target_codes = list(marker_definition.keys())
     target_phases = list(marker_definition.values())
@@ -202,7 +203,7 @@ def compute_rr_modulation(raw):
     
     if not raw.is_stim:
         raise Exception(
-            'Modulation of RR intervals can only be computed on data with CLAM-tACS')
+            'Single-trial RR intervals can only be computed on data with CLAM-tACS')
         
     if design == 'trial_wise':
         n_targets = len(target_codes)
@@ -219,7 +220,7 @@ def compute_rr_modulation(raw):
                     this_trial_rpeaks.append(ev_ecg[0])
             if len(this_trial_rpeaks) >= 2:
                 this_trial_rrs = np.diff(this_trial_rpeaks) / sfreq
-                trial_target_codes.extend([ev_trial[:, 2]] * len(this_trial_rrs))
+                trial_target_codes.extend([ev_trial[2]] * len(this_trial_rrs))
                 trial_rrs.extend(this_trial_rrs)
         trial_target_phases = np.vectorize(
             marker_definition.get)(trial_target_codes)
@@ -228,7 +229,12 @@ def compute_rr_modulation(raw):
         trial_rrs = np.diff(events_ecg[:,0]) / sfreq
         main_target_phase = _get_main_target_phase(marker_definition, events)
         trial_target_phases = [main_target_phase] * len(trial_rrs)
-    
+    trial_rrs = np.array(trial_rrs)
+    trial_target_phases = np.array(trial_target_phases)
+    zscores = zscore(trial_rrs)
+    mask = (zscores > -1.6) & (zscores < 1.6)
+    trial_rrs = trial_rrs[mask]
+    trial_target_phases = trial_target_phases[mask]
     df_result = pd.DataFrame({'participant': [participant] * len(trial_rrs),
                               'session': [session] * len(trial_rrs),
                               'design': [design] * len(trial_rrs),

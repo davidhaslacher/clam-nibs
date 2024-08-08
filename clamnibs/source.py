@@ -155,10 +155,10 @@ def _get_hht_amplitude(
     return amp
 
 
-def compute_amplitude_modulation(raw, measure='hilbert_amp'):
+def compute_single_trial_amplitude(raw, measure='hilbert_amp'):
     
     """
-    Compute the phase-lag dependent modulation of target oscillation amplitude by CLAM-NIBS.
+    Compute single-trial amplitude of target oscillation and assign it to CLAM-NIBS target phase.
 
     Parameters:
     -----------
@@ -173,7 +173,7 @@ def compute_amplitude_modulation(raw, measure='hilbert_amp'):
     Returns:
     --------
     pandas.DataFrame
-        A DataFrame containing the computed amplitude values for each epoch.
+        A DataFrame containing the computed amplitude values and CLAM-NIBS target phase for each epoch.
 
     Raises:
     -------
@@ -184,7 +184,7 @@ def compute_amplitude_modulation(raw, measure='hilbert_amp'):
     """
     
     if not isinstance(raw, RawCLAM):
-        raise Exception('compute_phase_tracking can only be applied to RawCLAM objects')
+        raise Exception('compute_single_trial_amplitude can only be applied to RawCLAM objects')
 
     sfreq = raw.info['sfreq']
     l_freq = raw.info['highpass']
@@ -262,10 +262,10 @@ def _get_fooof_exponent(
     return ap
 
 
-def compute_aperiodic_modulation(raw, measure='fooof_ae'):
+def compute_single_trial_aperiodic(raw, measure='fooof_ae'):
     
     """
-    Compute the phase-lag dependent modulation of target aperiodic activity by CLAM-NIBS.
+    Compute single-trial aperiodic exponent of activity in target and assign it to CLAM-NIBS target phase.
 
     Parameters:
     -----------
@@ -279,7 +279,7 @@ def compute_aperiodic_modulation(raw, measure='fooof_ae'):
     Returns:
     --------
     pandas.DataFrame
-        A DataFrame containing the computed aperiodic exponent for each epoch.
+        A DataFrame containing the computed aperiodic exponent along with CLAM-NIBS target phase for each epoch.
 
     Raises:
     -------
@@ -290,7 +290,7 @@ def compute_aperiodic_modulation(raw, measure='fooof_ae'):
     """
     
     if not isinstance(raw, RawCLAM):
-        raise Exception('compute_aperiodic_modulation can only be applied to RawCLAM objects')
+        raise Exception('compute_single_trial_aperiodic can only be applied to RawCLAM objects')
 
     sfreq = raw.info['sfreq']
     l_freq = raw.info['highpass']
@@ -356,10 +356,10 @@ def _get_fooof_frequency(
     return pf
 
 
-def compute_frequency_modulation(raw, measure='fooof_pf'):
+def compute_single_trial_frequency(raw, measure='fooof_pf'):
     
     """
-    Compute the phase-lag dependent modulation of target oscillation frequency by CLAM-NIBS.
+    Compute frequency of single-trial target oscillation and assign it to CLAM-NIBS target phase.
 
     Parameters:
     -----------
@@ -373,7 +373,7 @@ def compute_frequency_modulation(raw, measure='fooof_pf'):
     Returns:
     --------
     pandas.DataFrame
-        A DataFrame containing the computed peak frequency values for each epoch.
+        A DataFrame containing the computed peak frequency values along with CLAM-NIBS target phase for each epoch.
 
     Raises:
     -------
@@ -384,7 +384,7 @@ def compute_frequency_modulation(raw, measure='fooof_pf'):
     """
     
     if not isinstance(raw, RawCLAM):
-        raise Exception('compute_frequency_modulation can only be applied to RawCLAM objects')
+        raise Exception('compute_single_trial_frequency can only be applied to RawCLAM objects')
 
     sfreq = raw.info['sfreq']
     l_freq = raw.info['highpass']

@@ -33,7 +33,7 @@ def _dft(x, plot_sine=False):
         dy = np.mean(x)
         phases = np.linspace(phases_xs[0], phases_xs[-1],50)
         ys = amp*np.cos(phases + phase)+dy
-        plt.plot(xs, ys, c='k', linewidth=3)
+        plt.plot(xs, ys, c='k', linewidth=3, zorder=2)
     return amp, phase
 
 def _vectorized_dft_amp(args):
@@ -543,7 +543,8 @@ def test_modulation(
         test_level='participant',
         measure='amplitude',
         agg_func=np.mean,
-        plot=False):
+        plot=False,
+        plot_mode='box_strip'):
     
     """Test phase-dependent modulation of arbitrary outcome measure (e.g. amplitude).
 
@@ -569,6 +570,11 @@ def test_modulation(
         If string, the plot(s) will be saved at that path.
         If True, a figure will be created but not shown or saved.
         If False, no figure will be created.
+        
+    plot_mode : str, optional (default='box_strip')
+        The plotting mode. If all data points should be shown, use 'box_strip' for a boxplot and stripplot.
+        If data points should only be visualized as aggregated measures (e.g. accuracy across all trials or 
+        variability across all ECG RR intervals), use 'bar' for a barplot.
 
     Raises:
     -------
@@ -578,16 +584,16 @@ def test_modulation(
     
     df_data = df_data[df_data['measure'] == measure]
     if test_level == 'participant':
-        _test_modulation_participant(df_data, measure, agg_func, plot)
+        _test_modulation_participant(df_data, measure, agg_func, plot, plot_mode)
     elif test_level == 'group':
-        df_data = df_data.groupby('participant')['value'].mean()
-        _test_modulation_group(df_data, measure, agg_func, plot)
+        df_data = df_data.groupby([col for col in df_data.columns if col != 'value']).agg({'value' : agg_func}).reset_index()
+        _test_modulation_group(df_data, measure, np.mean, plot, plot_mode)
     else:
         raise Exception(
             'Test level should be either \'participant\' or \'group\'')
 
 
-def _test_modulation_participant(df_data, measure, agg_func, plot):
+def _test_modulation_participant(df_data, measure, agg_func, plot, plot_mode):
     df_results = pd.DataFrame()
     participants = df_data['participant'].unique()
     for participant in participants:
@@ -618,25 +624,38 @@ def _test_modulation_participant(df_data, measure, agg_func, plot):
             y = np.concatenate(target_measures)
             df_plot = pd.DataFrame(
                 {'Target Phase (°)': x, '{}'.format(measure): y})
-            sns.boxplot(
-                df_plot,
-                x='Target Phase (°)',
-                y='{}'.format(measure),
-                color='k',
-                boxprops=dict(
-                    alpha=.5),
-                showmeans=True)
-            ax = sns.stripplot(
-                df_plot,
-                x='Target Phase (°)',
-                y='{}'.format(measure),
-                color='r',
-                alpha=0.8)
-            _dft(np.array([x_.mean() for x_ in target_measures]))
+            df_plot_agg = df_plot.sort_values('Target Phase (°)').groupby('Target Phase (°)') \
+                            .agg({'{}'.format(measure) : agg_func}).reset_index()
+            if plot_mode == 'box_strip':
+                sns.boxplot(
+                    df_plot,
+                    x='Target Phase (°)',
+                    y='{}'.format(measure),
+                    color='k',
+                    boxprops=dict(
+                        alpha=0.5),
+                    showmeans=True,
+                    zorder=0)
+                sns.stripplot(
+                    df_plot,
+                    x='Target Phase (°)',
+                    y='{}'.format(measure),
+                    color='r',
+                    alpha=0.8,
+                    zorder=1)
+            elif plot_mode == 'bar':
+                sns.barplot(
+                    df_plot_agg,
+                    x='Target Phase (°)',
+                    y='{}'.format(measure),
+                    color='k',
+                    alpha=0.5,
+                    errorbar=None,
+                    zorder=0)
             if len(target_phases) == 2:
                 plt.title('t = {:.3e}, p = {:.3e}'.format(tval, pval))
             else:
-                avgs = df_plot.sort_values('Target Phase (°)').groupby('Target Phase (°)')['{}'.format(measure)].mean().to_numpy()
+                avgs = df_plot_agg['{}'.format(measure)].to_numpy()
                 _dft(avgs, plot_sine=True)
                 plt.title('dft_amp = {:.3e}, p = {:.3e}'.format(tval, pval))
             sns.despine()
@@ -656,7 +675,7 @@ def _test_modulation_participant(df_data, measure, agg_func, plot):
     return df_results
 
 
-def _test_modulation_group(df_data, measure, agg_func, plot):
+def _test_modulation_group(df_data, measure, agg_func, plot, plot_mode):
     gb_target_phase = df_data.groupby('target_phase')
     target_phases = []
     target_measures = []
@@ -669,7 +688,7 @@ def _test_modulation_group(df_data, measure, agg_func, plot):
     else:
         res = permutation_test(target_measures,
                                 lambda *x: _dft(np.array([agg_func(x_) for x_ in x]))[0],
-                                permutation_type='independent',
+                                permutation_type='samples',
                                 alternative='greater',
                                 n_resamples=1000)
         tval = res.statistic
@@ -682,24 +701,38 @@ def _test_modulation_group(df_data, measure, agg_func, plot):
         y = np.concatenate(target_measures)
         df_plot = pd.DataFrame(
             {'Target Phase (°)': x, '{}'.format(measure): y})
-        sns.boxplot(
-            df_plot,
-            x='Target Phase (°)',
-            y='{}'.format(measure),
-            color='k',
-            boxprops=dict(
-                alpha=.5),
-            showmeans=True)
-        ax = sns.stripplot(
-            df_plot,
-            x='Target Phase (°)',
-            y='{}'.format(measure),
-            color='r',
-            alpha=0.8)
+        df_plot_agg = df_plot.sort_values('Target Phase (°)').groupby('Target Phase (°)') \
+                .agg({'{}'.format(measure) : agg_func}).reset_index()
+        if plot_mode == 'box_strip':
+            sns.boxplot(
+                df_plot,
+                x='Target Phase (°)',
+                y='{}'.format(measure),
+                color='k',
+                boxprops=dict(
+                    alpha=.5),
+                showmeans=True,
+                zorder=0)
+            sns.stripplot(
+                df_plot,
+                x='Target Phase (°)',
+                y='{}'.format(measure),
+                color='r',
+                alpha=0.8,
+                zorder=1)
+        elif plot_mode == 'bar':
+            sns.barplot(
+                df_plot_agg,
+                x='Target Phase (°)',
+                y='{}'.format(measure),
+                color='k',
+                alpha=0.5,
+                errorbar=None,
+                zorder=0)
         if len(target_phases) == 2:
             plt.title('t = {:.3e}, p = {:.3e}'.format(tval, pval))
         else:
-            avgs = df_plot.sort_values('Target Phase (°)').groupby('Target Phase (°)')['{}'.format(measure)].mean().to_numpy()
+            avgs = df_plot_agg['{}'.format(measure)].to_numpy()
             _dft(avgs, plot_sine=True)
             plt.title('dft_amp = {:.3e}, p = {:.3e}'.format(tval, pval))
         sns.despine()
@@ -711,9 +744,8 @@ def _test_modulation_group(df_data, measure, agg_func, plot):
                 os.makedirs(plot,exist_ok=True)
             plt.savefig('{}_modulation_group.pdf'.format(measure))
             plt.close()
-    df_append = pd.DataFrame({'participant': ['all'],
+    df_results = pd.DataFrame({'participant': ['all'],
                               't_unit': [tval_unit],
                               't_value': [tval],
                               'p_value': [pval]})
-    df_results = pd.concat([df_results, df_append])
     return df_results
