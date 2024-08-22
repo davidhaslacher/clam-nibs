@@ -34,6 +34,7 @@ class RawCLAM(RawBrainVision):
     marker_definition : dict, optional
         Dictionary containing marker definitions.
         Mapping from target phase markers (e.g. 1 - 6) to target phases [-pi, pi].
+        Target phases can also take the values 'ns' (no stimulation) or 'ol' (open-loop stimulation).
     sfreq : float or None, optional
         New sampling frequency, or None if the data should not be resampled.
     ignore_calibration_files: bool, optional

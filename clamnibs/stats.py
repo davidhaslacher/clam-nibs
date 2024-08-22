@@ -582,6 +582,9 @@ def test_modulation(
         If the test level is not \'participant\' or \'group\'
     """
     
+    if np.any(np.isin(['ol', 'ns'], df_data['target_phase'])):
+        raise Exception('test_modulation test for phase-dependent modulation, it currently \
+                        does not support open-loop or no stimulation conditions')
     df_data = df_data[df_data['measure'] == measure]
     if test_level == 'participant':
         _test_modulation_participant(df_data, measure, agg_func, plot, plot_mode)

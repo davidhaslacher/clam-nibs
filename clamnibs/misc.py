@@ -141,18 +141,13 @@ def compute_single_trial_behavior(raw, measure='binary_accuracy', correct_codes=
     if not raw.is_stim:
         raise Exception(
             'Single-trial performance with target phases can only be computed on data with CLAM-NIBS')
-    target_codes = list(marker_definition.keys())
-    target_phases = list(marker_definition.values())
-    target_labels = ['{:d}'.format(int(degrees(x))) for x in target_phases]
-    n_targets = len(target_codes)
     match measure:
         case 'binary_accuracy':
             trial_target_codes, trial_values = _get_trial_target_codes_binary_accuracy(raw, correct_codes, incorrect_codes)
         case 'cwm_error':
             trial_target_codes, trial_values = _get_trial_target_codes_cwm_error(raw)
     trial_values = np.abs(trial_values)
-    trial_target_phases = np.vectorize(
-        marker_definition.get)(trial_target_codes)
+    trial_target_phases = [marker_definition.get(x) for x in trial_target_codes]
     if design == 'session_wise':
         main_trial_code = mode(trial_target_codes)
         mask = trial_target_codes == main_trial_code
@@ -192,7 +187,6 @@ def compute_single_trial_rr(raw):
         raise Exception('compute_single_trial_rr can only be applied to RawCLAM objects')
     marker_definition = raw.marker_definition
     target_codes = list(marker_definition.keys())
-    target_phases = list(marker_definition.values())
     sfreq = raw.info['sfreq']
     tmin = raw.tmin
     tmax = raw.tmax
@@ -222,8 +216,7 @@ def compute_single_trial_rr(raw):
                 this_trial_rrs = np.diff(this_trial_rpeaks) / sfreq
                 trial_target_codes.extend([ev_trial[2]] * len(this_trial_rrs))
                 trial_rrs.extend(this_trial_rrs)
-        trial_target_phases = np.vectorize(
-            marker_definition.get)(trial_target_codes)
+        trial_target_phases = [marker_definition.get(x) for x in trial_target_codes]
     else:
         events_ecg = find_ecg_events(raw, ch_name='ecg')[0]
         trial_rrs = np.diff(events_ecg[:,0]) / sfreq

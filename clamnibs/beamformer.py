@@ -51,6 +51,9 @@ def get_target(obj):
         raise Exception('get_target can only be applied to RawCLAM or EpochsCLAM objects')
     ixs_goods = _get_ixs_goods(obj)
     target_codes = obj.marker_definition.keys()
+    target_phases = obj.marker_definition.values()
+    if 'ns' in target_phases and (any(isinstance(x, int) for x in target_phases) or 'ol' in target_phases):
+        raise Exception('get_target currently does not support a mixture of stimulation and no stimulation data')
     if isinstance(obj, mne.Epochs):
         epochs_events = obj.events
         epochs_data = obj.get_data(ixs_goods)

@@ -188,7 +188,7 @@ def compute_connectivity(obj, measure='phase_lag_index'):
         conn += np.diag(np.ones(n_chs))
         conns.append(conn)
     if design == 'trial_wise':
-        target_phases = np.vectorize(marker_definition.get)(events[:, 2])
+        target_phases = [marker_definition.get(x) for x in events[:, 2]]
     else:
         target_phases = [_get_main_target_phase(marker_definition, events)]
     df_result = pd.DataFrame({'participant': [participant] * len(conns),

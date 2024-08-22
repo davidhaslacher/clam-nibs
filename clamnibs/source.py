@@ -235,8 +235,7 @@ def compute_single_trial_amplitude(raw, measure='hilbert_amp'):
             amp = np.mean(np.abs(epoch_hil))
         epoch_amps.append(amp)
     if design == 'trial_wise':
-        epoch_target_phases = np.vectorize(
-            marker_definition.get)(epochs.events[:, 2])
+        epoch_target_phases = [marker_definition.get(x) for x in epochs.events[:, 2]]
     else:
         epoch_target_phases = [_get_main_target_phase(marker_definition, events)]
     df_result = pd.DataFrame({'participant': [participant] * len(epoch_amps),
@@ -326,8 +325,7 @@ def compute_single_trial_aperiodic(raw, measure='fooof_ae'):
             h_freq_target)
         epoch_aes.append(ap)
     if design == 'trial_wise':
-        epoch_target_phases = np.vectorize(
-            marker_definition.get)(epochs.events[:, 2])
+        epoch_target_phases = [marker_definition.get(x) for x in epochs.events[:, 2]]
     else:
         epoch_target_phases = [_get_main_target_phase(marker_definition, events)]
     df_result = pd.DataFrame({'participant': [participant] * len(epoch_aes),
@@ -420,8 +418,7 @@ def compute_single_trial_frequency(raw, measure='fooof_pf'):
             h_freq_target)
         epoch_pfs.append(ap)
     if design == 'trial_wise':
-        epoch_target_phases = np.vectorize(
-            marker_definition.get)(epochs.events[:, 2])
+        epoch_target_phases = [marker_definition.get(x) for x in epochs.events[:, 2]]
     else:
         epoch_target_phases = [_get_main_target_phase(marker_definition, events)]
     df_result = pd.DataFrame({'participant': [participant] * len(epoch_pfs),
