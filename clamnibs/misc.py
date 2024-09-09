@@ -235,6 +235,74 @@ def compute_single_trial_rr(raw):
                               'measure': ['rr_interval'] * len(trial_rrs),
                               'value': trial_rrs})
     return df_result
+
+def compute_single_trial_scr(raw):
+    
+    """
+    Compute single-trial area under the curve (AUC) of the skin conductance response (SCR) [1],
+    and assign it to CLAM-NIBS target phase.
+
+    Parameters:
+    -----------
+    raw : RawCLAM
+        The RawCLAM object containing the raw data to analyze.
+
+    Returns:
+    --------
+    pandas.DataFrame
+        A DataFrame containing the computed SCR AUC and CLAM-NIBS target phases.
+
+    Raises:
+    -------
+    Exception
+        If the input raw data is not of type RawCLAM.
+        If the method is attempted on data without CLAM-tACS stimulation.
+        
+    [1] Bach, Dominik R., Karl J. Friston, and Raymond J. Dolan. "Analytic measures for quantification of arousal 
+        from spontaneous skin conductance fluctuations." International journal of psychophysiology 76.1 (2010): 52-55.
+    
+    """
+    
+    if not isinstance(raw, RawCLAM):
+        raise Exception('compute_single_trial_scr can only be applied to RawCLAM objects')
+    marker_definition = raw.marker_definition
+    target_codes = list(marker_definition.keys())
+    sfreq = raw.info['sfreq']
+    tmin = raw.tmin
+    tmax = raw.tmax
+    participant = raw.participant
+    session = raw.session
+    design = raw.design
+    events = mne.events_from_annotations(raw)[0]
+    
+    if not raw.is_stim:
+        raise Exception(
+            'Single-trial SCR AUC can only be computed on data with CLAM-tACS')
+        
+    raw = raw.copy()
+    raw.pick_channels(['eda'])
+    raw.filter(0.1, 5, picks='all')
+    raw._data -= raw._data.min()
+    
+    if design == 'trial_wise':
+        epochs = EpochsCLAM(raw, apply_hil = False)
+        epoch_aucs = epochs.get_data().squeeze().sum(-1)
+    else:
+        epoch_aucs = raw.get_data().squeeze().sum(-1)
+        
+    if design == 'trial_wise':
+        epoch_target_phases = [marker_definition.get(x) for x in epochs.events[:, 2]]
+    else:
+        epoch_target_phases = [_get_main_target_phase(marker_definition, events)]
+    
+    df_result = pd.DataFrame({'participant': [participant] * len(epoch_aucs),
+                            'session': [session] * len(epoch_aucs),
+                            'design': [design] * len(epoch_aucs),
+                            'target_phase': epoch_target_phases,
+                            'measure': ['scr_auc'] * len(epoch_aucs),
+                            'value': epoch_aucs})
+    
+    return df_result
     
 def save_calibration_data(obj, folder_path, phase_delay=None):
     exclude_idx_file_path = '{}\\exclude_idx.mat'.format(folder_path)
