@@ -638,7 +638,8 @@ def _test_modulation_participant(df_data, measure, agg_func, plot, plot_mode):
                     boxprops=dict(
                         alpha=0.5),
                     showmeans=True,
-                    zorder=0)
+                    zorder=0,
+                    showfliers=False)
                 sns.stripplot(
                     df_plot,
                     x='Target Phase (°)',
@@ -715,7 +716,8 @@ def _test_modulation_group(df_data, measure, agg_func, plot, plot_mode):
                 boxprops=dict(
                     alpha=.5),
                 showmeans=True,
-                zorder=0)
+                zorder=0,
+                showfliers=False)
             sns.stripplot(
                 df_plot,
                 x='Target Phase (°)',
