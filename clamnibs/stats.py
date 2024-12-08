@@ -36,7 +36,9 @@ def _dft(x, plot_sine=False):
         plt.plot(xs, ys, c='k', linewidth=3, zorder=2)
     return amp, phase
 
-def _vectorized_dft_amp(args):
+def _vectorized_dft_amp(*args):
+    if args[0].ndim == 1:
+        args = [arg[:, None] for arg in args]
     n_features = args[0].shape[-1]
     amps = np.empty(n_features)
     for ix_feature in range(n_features):
@@ -46,7 +48,7 @@ def _vectorized_dft_amp(args):
     return amps
 
 def _dft_amp_stat(*args):
-    return _vectorized_dft_amp(args)
+    return _vectorized_dft_amp(*args)
 
 # this performs permutations within each subject, hacky solution
 def _dft_amp_stat_group(*args, orig_args=None):
@@ -119,7 +121,7 @@ def test_sensor_network_modulation(
         _test_sensor_network_modulation_participant(
             df_data, info, measure, plot)
     elif test_level == 'group':
-        df_data = df_data.groupby('participant')['value'].mean()
+        df_data = df_data.groupby([col for col in df_data.columns if col != 'value']).agg({'value' : np.mean}).reset_index()
         _test_sensor_network_modulation_group(df_data, info, measure, plot)
     else:
         raise Exception(
@@ -167,10 +169,9 @@ def _test_sensor_network_modulation_participant(df_data, info, measure, plot):
                                                                  verbose=True)
             tvals_unit = 'ttest_ind'
         else:
-            # use circular - linear correlation coefficient statistic
-            stat_fun = partial(_dft_amp_stat, target_phases=target_phases)
+            stat_fun = _dft_amp_stat
             threshold = np.nanpercentile(
-                [stat_fun([d[:, ix] for d in data]) for ix in range(n_conns)], 95)
+                [stat_fun(*[d[:, ix] for d in data]) for ix in range(n_conns)], 95)
             tvals, clusters, pvals, _ = permutation_cluster_test(data,
                                                                  threshold=threshold,
                                                                  adjacency=adjacency,
@@ -183,7 +184,6 @@ def _test_sensor_network_modulation_participant(df_data, info, measure, plot):
                                                                  verbose=True)
             tvals_unit = 'dft_amp'
         if plot:
-            plt.figure()
             colors = sns.color_palette("Set2")
             sphere = _check_sphere(None, info)
             pos, outlines = _get_pos_outlines(info, range(
@@ -198,22 +198,22 @@ def _test_sensor_network_modulation_participant(df_data, info, measure, plot):
                 tvals_sig.append(tvals[cluster].mean())
                 pvals_sig.append(pval)
                 conns_cluster = []
-                for ix_conn in cluster:
+                for ix_conn in cluster[0]:
                     ix_ch_1 = ix_conn // n_chs
                     ix_ch_2 = ix_conn % n_chs
                     conns_cluster.append([ix_ch_1, ix_ch_2])
                     if plot:
-                        x_coords = [info['chs'][ix_ch_1]['loc'][0],
-                                    info['chs'][ix_ch_2]['loc'][0]]
-                        y_coords = [info['chs'][ix_ch_1]['loc'][1],
-                                    info['chs'][ix_ch_2]['loc'][1]]
+                        x_coords = [pos[ix_ch_1][0],
+                                    pos[ix_ch_2][0]]
+                        y_coords = [pos[ix_ch_1][1],
+                                    pos[ix_ch_2][1]]
                         plt.plot(x_coords, y_coords, c=colors[ix_cluster])
                 conns_sig.append(conns_cluster)
 
         if plot:
             plt.title(
                 '{}, Modulation of {}'.format(
-                    _fmt(participant),
+                    participant,
                     _fmt(measure)))
             plt.tight_layout()
         df_append = pd.DataFrame(
@@ -266,14 +266,12 @@ def _test_sensor_network_modulation_group(df_data, info, measure, plot):
                                                                    verbose=True)
         tvals_unit = 'ttest_dep'
     else:
-        # use circular - linear correlation coefficient statistic
         stat_fun = partial(
             _dft_amp_stat_group,
-            orig_args=data,
-            target_phases=target_phases)
+            orig_args=data)
         first_pass_done = False
         threshold = np.nanpercentile(
-            [stat_fun([d[:, ix] for d in data]) for ix in range(n_conns)], 95)
+            [stat_fun(*[d[:, ix] for d in data]) for ix in range(n_conns)], 95)
         tvals, clusters, pvals, _ = permutation_cluster_test([d.copy() for d in data],
                                                              threshold=threshold,
                                                              adjacency=adjacency,
@@ -286,7 +284,6 @@ def _test_sensor_network_modulation_group(df_data, info, measure, plot):
                                                              verbose=True)
         tvals_unit = 'dft_amp'
     if plot:
-        plt.figure()
         colors = sns.color_palette("Set2")
         sphere = _check_sphere(None, info)
         pos, outlines = _get_pos_outlines(info, range(
@@ -301,15 +298,15 @@ def _test_sensor_network_modulation_group(df_data, info, measure, plot):
             tvals_sig.append(tvals[cluster].mean())
             pvals_sig.append(pval)
             conns_cluster = []
-            for ix_conn in cluster:
+            for ix_conn in cluster[0]:
                 ix_ch_1 = ix_conn // n_chs
                 ix_ch_2 = ix_conn % n_chs
                 conns_cluster.append([ix_ch_1, ix_ch_2])
                 if plot:
-                    x_coords = [info['chs'][ix_ch_1]['loc'][0],
-                                info['chs'][ix_ch_2]['loc'][0]]
-                    y_coords = [info['chs'][ix_ch_1]['loc'][1],
-                                info['chs'][ix_ch_2]['loc'][1]]
+                    x_coords = [pos[ix_ch_1][0],
+                                pos[ix_ch_2][0]]
+                    y_coords = [pos[ix_ch_1][1],
+                                pos[ix_ch_2][1]]
                     plt.plot(x_coords, y_coords, c=colors[ix_cluster])
             conns_sig.append(conns_cluster)
 
@@ -369,7 +366,7 @@ def test_sensor_cluster_modulation(
             df_data, info, measure, plot)
         return df_results
     elif test_level == 'group':
-        df_data = df_data.groupby('participant')['value'].mean()
+        df_data = df_data.groupby([col for col in df_data.columns if col != 'value']).agg({'value' : np.mean}).reset_index()
         df_results = _test_sensor_cluster_modulation_group(df_data, info, measure, plot)
         return df_results
     else:
@@ -397,7 +394,7 @@ def _test_sensor_cluster_modulation_participant(df_data, info, measure, plot):
             tvals, clusters, pvals, _ = permutation_cluster_test(data,
                                                                  threshold=threshold,
                                                                  adjacency=adjacency,
-                                                                 out_type=' indices',
+                                                                 out_type='indices',
                                                                  step_down_p=0,
                                                                  t_power=1,
                                                                  stat_fun=ttest_ind_no_p,
@@ -406,10 +403,9 @@ def _test_sensor_cluster_modulation_participant(df_data, info, measure, plot):
                                                                  verbose=True)
             tvals_unit = 'ttest_ind'
         else:
-            # use circular - linear correlation coefficient statistic
-            stat_fun = partial(_dft_amp_stat, target_phases=target_phases)
+            stat_fun = _dft_amp_stat
             threshold = np.nanpercentile(
-                [stat_fun([d[:, ix] for d in data]) for ix in range(n_chs)], 95)
+                [stat_fun(*[d[:, ix] for d in data]) for ix in range(n_chs)], 95)
             tvals, clusters, pvals, _ = permutation_cluster_test(data,
                                                                  threshold=threshold,
                                                                  adjacency=adjacency,
@@ -432,7 +428,6 @@ def _test_sensor_cluster_modulation_participant(df_data, info, measure, plot):
                 channels_sig.append(info.ch_names[cluster])
                 mask_sig[cluster] = True
         if plot:
-            plt.figure()
             im = plot_topomap(
                 tvals,
                 info,
@@ -445,7 +440,7 @@ def _test_sensor_cluster_modulation_participant(df_data, info, measure, plot):
                     _fmt(measure), _fmt(tvals_unit)))
             plt.title(
                 '{}, Modulation of {}'.format(
-                    _fmt(participant),
+                    participant,
                     _fmt(measure)))
             plt.tight_layout()
         df_append = pd.DataFrame(
@@ -486,14 +481,12 @@ def _test_sensor_cluster_modulation_group(df_data, info, measure, plot):
                                                                    verbose=True)
         tvals_unit = 'ttest_dep'
     else:
-        # use circular - linear correlation coefficient statistic
         stat_fun = partial(
             _dft_amp_stat_group,
-            orig_args=data,
-            target_phases=target_phases)
+            orig_args=data)
         first_pass_done = False
         threshold = np.nanpercentile(
-            [stat_fun([d[:, ix] for d in data]) for ix in range(n_chs)], 95)
+            [stat_fun(*[d[:, ix] for d in data]) for ix in range(n_chs)], 95)
         tvals, clusters, pvals, _ = permutation_cluster_test([d.copy() for d in data],
                                                              threshold=threshold,
                                                              adjacency=adjacency,

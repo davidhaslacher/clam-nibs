@@ -16,6 +16,8 @@ from mne.viz import plot_sensors
 import pandas as pd
 from .misc import _get_ixs_goods, _get_main_target_phase
 from .base import RawCLAM, EpochsCLAM
+from .source import get_target
+from tqdm import tqdm
 
 
 def _find_n_nulls(A, B, D, M):
@@ -114,82 +116,77 @@ def clean_sensor_data(obj_no_stim, obj_stim):
     obj_stim.interpolate_bads(reset_bads=True)
 
 
-def compute_connectivity(obj, measure='phase_lag_index'):
+def compute_single_trial_connectivity(raw, measure='phase_lag_index'):
     
     """
-    Compute connectivity between EEG sensors using the phase lag index [1].
+    Compute single-trial amplitude of target oscillation and assign it to CLAM-NIBS target phase.
 
     Parameters:
     -----------
-    obj : RawCLAM or EpochsCLAM
-        The RawCLAM or EpochsCLAM object containing the EEG data.
+    raw : RawCLAM
+        The RawCLAM object containing the raw data to analyze.
     measure : str, optional
         The connectivity measure to compute. Currently, only 'phase_lag_index' is supported (default).
 
     Returns:
     --------
     pandas.DataFrame
-        A DataFrame containing the computed connectivity matrices for each trial or epoch.
+        A DataFrame containing the computed amplitude values and CLAM-NIBS target phase for each epoch.
 
     Raises:
     -------
     Exception
-        If the input data type is not RawCLAM or EpochsCLAM.
-        If the connectivity measure is not supported.
-        If the data is not filtered into the target frequency range.
-        If the data does not contain analytic signals for connectivity computation.
-        If there are bad channels that have not been interpolated.
-    
-    References:
-    -----------
-    [1] Stam, Cornelis J., Guido Nolte, and Andreas Daffertshofer. "Phase lag index: assessment of 
-    functional connectivity from multi channel EEG and MEG with diminished bias from common sources." 
-    Human brain mapping 28.11 (2007): 1178-1193.
+        If the input raw data is not of type RawCLAM.
+        If the method for computing amplitude is not supported.
+        If the Raw object does not meet the requirements for the chosen method.
     """
     
-    if not (isinstance(obj, RawCLAM) or isinstance(obj, EpochsCLAM)):
-        raise Exception('compute_connectivity can only be applied to RawCLAM or EpochsCLAM objects')
+    if not isinstance(raw, RawCLAM):
+        raise Exception('compute_single_trial_amplitude can only be applied to RawCLAM objects')
 
-    l_freq = obj.info['highpass']
-    h_freq = obj.info['lowpass']
-    l_freq_target = obj.l_freq_target
-    h_freq_target = obj.h_freq_target
-    marker_definition = obj.marker_definition
-    participant = obj.participant
-    session = obj.session
-    design = obj.design
-    events = obj.events
-    bads = obj.info['bads']
-    data = obj.get_data()
+    sfreq = raw.info['sfreq']
+    l_freq = raw.info['highpass']
+    h_freq = raw.info['lowpass']
+    l_freq_target = raw.l_freq_target
+    h_freq_target = raw.h_freq_target
+    marker_definition = raw.marker_definition
+    participant = raw.participant
+    session = raw.session
+    design = raw.design
 
     if measure not in ['phase_lag_index']:
         raise Exception('Connectivity measure must be \"phase_lag_index\"')
     if not (l_freq == l_freq_target and h_freq == h_freq_target):
         raise Exception(
             'Data must be filtered into the target frequency range to compute connectivity')
-    if not np.iscomplexobj(data):
-        raise Exception(
-            'Data must contain analytic signal for connectivity computation')
-    if not len(bads) == 0:
+    if not len(raw.info['bads']) == 0:
         raise Exception(
             'Bads must be interpolated before connectivity computation')
-
-    if data.ndim == 2:
-        data = data[None, :, :]
-    phases = np.angle(data)
-    n_chs = phases.shape[1]
+        
+    if design == 'trial_wise':
+        epochs = EpochsCLAM(raw)
+        data_hil = epochs.get_data(picks='eeg')
+    else:
+        data_hil = raw.copy().apply_hilbert()[None, :, :]
+        
+    phases = np.angle(data_hil)
+    n_chs = raw.n_chs
+    
     conns = []
-    for phase in phases:
+    for phase in tqdm(phases, desc='Computing single-trial connectivity'):
         conn = np.zeros((n_chs, n_chs))
         for ix1 in range(n_chs):
             for ix2 in range(ix1 + 1, n_chs):
-                conn[ix1, ix2] = misc.pli(phase[ix1], phase[ix2])
+                conn[ix1, ix2] = misc._pli(phase[ix1], phase[ix2])
         conn += conn.T
         conn += np.diag(np.ones(n_chs))
         conns.append(conn)
+        
     if design == 'trial_wise':
-        target_phases = [marker_definition.get(x) for x in events[:, 2]]
+        events = epochs.events
+        target_phases = np.vectorize(marker_definition.get)(events[:, 2])
     else:
+        events = mne.events_from_annotations(raw)[0]
         target_phases = [_get_main_target_phase(marker_definition, events)]
     df_result = pd.DataFrame({'participant': [participant] * len(conns),
                               'session': [session] * len(conns),
