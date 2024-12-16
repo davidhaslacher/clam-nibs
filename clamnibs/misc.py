@@ -6,7 +6,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from math import degrees
-from pingouin import circ_corrcl
 from statistics import mode
 from .base import RawCLAM, EpochsCLAM
 from scipy.io import savemat

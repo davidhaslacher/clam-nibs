@@ -7,7 +7,6 @@ from mne.stats import permutation_cluster_test
 from scipy.sparse import coo_matrix
 import scipy
 from mne.stats import ttest_ind_no_p
-from pingouin import circ_corrcl
 from mne.viz.topomap import _get_pos_outlines
 from mne.utils.check import _check_sphere
 import matplotlib.pyplot as plt

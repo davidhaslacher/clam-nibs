@@ -12,7 +12,6 @@ from scipy.stats import ttest_ind
 import emd
 from math import degrees
 from scipy.stats import f_oneway
-from pingouin import circ_corrcl
 from fooof import FOOOF
 from mne.time_frequency import psd_array_welch
 from .misc import _get_ixs_goods, _get_main_target_phase

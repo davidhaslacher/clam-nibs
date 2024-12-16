@@ -58,10 +58,10 @@ def _dft_amp_stat_group(*args, orig_args=None):
         for ix_participant in range(permuted_args.shape[1]):
             permuted_args[:, ix_participant] = permutation(
                 permuted_args[:, ix_participant])
-        return _vectorized_dft_amp(permuted_args)
+        return _vectorized_dft_amp(*permuted_args)
     else:
         first_pass_done = True
-        return _vectorized_dft_amp(orig_args)
+        return _vectorized_dft_amp(*orig_args)
 
 
 def _wrap(phases):
@@ -266,12 +266,14 @@ def _test_sensor_network_modulation_group(df_data, info, measure, plot):
                                                                    verbose=True)
         tvals_unit = 'ttest_dep'
     else:
+        stat_fun = _dft_amp_stat
+        threshold = np.nanpercentile(
+            [stat_fun(*[d[:, ix] for d in data]) for ix in range(n_conns)], 95)
+        global first_pass_done
+        first_pass_done = False
         stat_fun = partial(
             _dft_amp_stat_group,
             orig_args=data)
-        first_pass_done = False
-        threshold = np.nanpercentile(
-            [stat_fun(*[d[:, ix] for d in data]) for ix in range(n_conns)], 95)
         tvals, clusters, pvals, _ = permutation_cluster_test([d.copy() for d in data],
                                                              threshold=threshold,
                                                              adjacency=adjacency,
@@ -281,7 +283,8 @@ def _test_sensor_network_modulation_group(df_data, info, measure, plot):
                                                              stat_fun=stat_fun,
                                                              tail=0,
                                                              n_jobs=1,
-                                                             verbose=True)
+                                                             verbose=True,
+                                                             buffer_size=n_conns)
         tvals_unit = 'dft_amp'
     if plot:
         colors = sns.color_palette("Set2")
@@ -313,12 +316,11 @@ def _test_sensor_network_modulation_group(df_data, info, measure, plot):
     if plot:
         plt.title('Group, Modulation of {}'.format(_fmt(measure)))
         plt.tight_layout()
-    df_append = pd.DataFrame({'participant': ['all'] * len(tvals_sig),
+    df_results = pd.DataFrame({'participant': ['all'] * len(tvals_sig),
                               't_unit': [tvals_unit] * len(tvals_sig),
                               't_value': tvals_sig,
                               'p_value': pvals_sig,
                               'connections': conns_sig})
-    df_results = pd.concat([df_results, df_append])
     return df_results
 
 
@@ -481,12 +483,14 @@ def _test_sensor_cluster_modulation_group(df_data, info, measure, plot):
                                                                    verbose=True)
         tvals_unit = 'ttest_dep'
     else:
+        stat_fun = _dft_amp_stat
+        threshold = np.nanpercentile(
+            [stat_fun(*[d[:, ix] for d in data]) for ix in range(n_chs)], 95)
+        global first_pass_done
+        first_pass_done = False
         stat_fun = partial(
             _dft_amp_stat_group,
             orig_args=data)
-        first_pass_done = False
-        threshold = np.nanpercentile(
-            [stat_fun(*[d[:, ix] for d in data]) for ix in range(n_chs)], 95)
         tvals, clusters, pvals, _ = permutation_cluster_test([d.copy() for d in data],
                                                              threshold=threshold,
                                                              adjacency=adjacency,
@@ -496,7 +500,8 @@ def _test_sensor_cluster_modulation_group(df_data, info, measure, plot):
                                                              stat_fun=stat_fun,
                                                              tail=0,
                                                              n_jobs=1,
-                                                             verbose=True)
+                                                             verbose=True,
+                                                             buffer_size=n_chs)
         tvals_unit = 'dft_amp'
     tvals_sig = []
     pvals_sig = []
@@ -522,12 +527,11 @@ def _test_sensor_cluster_modulation_group(df_data, info, measure, plot):
                 _fmt(tvals_unit)))
         plt.title('Group, Modulation of {}'.format(_fmt(measure)))
         plt.tight_layout()
-    df_append = pd.DataFrame({'participant': ['all'] * len(tvals_sig),
+    df_results = pd.DataFrame({'participant': ['all'] * len(tvals_sig),
                               't_unit': [tvals_unit] * len(tvals_sig),
                               't_value': tvals_sig,
                               'p_value': pvals_sig,
                               'channels': channels_sig})
-    df_results = pd.concat([df_results, df_append])
     return df_results
 
 
