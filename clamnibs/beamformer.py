@@ -15,9 +15,10 @@ from .base import RawCLAM, EpochsCLAM
 
 def _get_lcmv_weights(COV, forward):
     COVinv = linalg.pinv(COV)
-    return ((COVinv @ forward[:, None])).squeeze() / \
+    w = ((COVinv @ forward[:, None])).squeeze() / \
         (forward[None, :] @ COVinv @ forward[:, None])
-
+    w /= np.sqrt(w @ COV @ w.T)
+    return w
 
 def get_target(obj):
     

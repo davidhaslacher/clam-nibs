@@ -5,6 +5,11 @@ from matplotlib import rcParams
 import matplotlib.pyplot as plt
 from functools import partial
 from .base import RawCLAM, EpochsCLAM
+from .misc import df_to_array
+import seaborn as sns
+from mne.viz import plot_sensors
+import pandas as pd
+from .stats import _dft
 
 def _onpick_sensor(event, fig, ax, pos, ch_names, bads, scatter):
     if event is not None:
@@ -132,3 +137,149 @@ def set_bads(obj, default_bads):
     plt.tight_layout()
     plt.show()
     obj.info['bads'] = bads
+    
+def plot_network_modulation_values(df_network_results, df_network_data, participant_identified_in, participant_applied_to):
+    
+    """Plot connectivity values averaged within each modulated network as a 
+    box-/stripplot featuring each target phase.
+
+    Parameters:
+    -----------
+    df_network_results: pandas.DataFrame
+        The dataframe containing the connections which were modulated at the 
+        participant- or group-level.
+        
+    df_network_data: pandas.DataFrame
+        The dataframe containing the connectivity matrix for each trial 
+        and participant.
+        
+    participant_identified_in : str
+        The participant in which the network was identified. This network mask
+        will be applied to the data and plotted. Can be 'group' for group-level 
+        network.
+        
+    participant_applied_to : str
+        The participant to whose data the network mask should be applied for
+        plotting. Can be 'group' for group-level data.
+    """
+    
+    df_network_results = df_network_results[df_network_results['participant'] == participant_identified_in]
+    if participant_applied_to == 'group':
+        df_network_data = df_network_data.groupby([col for col in df_network_data.columns if col != 'value']).agg({'value' : np.mean}).reset_index()
+    else:
+        df_network_data = df_network_data[df_network_data['participant'] == participant_applied_to]
+    
+    network_data, target_phases = df_to_array(df_network_data)
+    # this is now (n_phases, n_epochs, n_chs, n_chs)
+    
+    measure = df_network_data['measure'].iloc[0]
+    
+    for ix_cluster, cluster in df_network_results.iterrows():
+        
+        t_value = np.mean(cluster['t_values'])  # average over t-values per connection in cluster
+        p_value = cluster['p_value']            # this is one p-value for the cluster
+        ixs_row, ixs_col = np.array(cluster['connections']).T    # this contains the indices marking connections between sensors in cluster
+        cluster_data = network_data[:, :, ixs_row, ixs_col].mean(-1)
+        x = np.concatenate([[target_phases[ix]] * len(cluster_data[ix])
+                            for ix in range(len(target_phases))])
+        x = [round(np.rad2deg(ph)) for ph in x]
+        y = np.concatenate(cluster_data)
+        df_plot = pd.DataFrame(
+                {'Target Phase (°)': x, '{}'.format(measure): y})
+        df_plot_agg = df_plot.sort_values('Target Phase (°)').groupby('Target Phase (°)') \
+                .agg({'{}'.format(measure) : np.mean}).reset_index()
+        plt.figure()
+        sns.boxplot(
+            df_plot,
+            x='Target Phase (°)',
+            y='{}'.format(measure),
+            color='k',
+            boxprops=dict(
+                alpha=0.5),
+            showmeans=True,
+            zorder=0,
+            showfliers=False)
+        sns.stripplot(
+            df_plot,
+            x='Target Phase (°)',
+            y='{}'.format(measure),
+            color='r',
+            alpha=0.8,
+            zorder=1)
+        if len(target_phases) > 2:
+            avgs = df_plot_agg['{}'.format(measure)].to_numpy()
+            _dft(avgs, plot_sine=True)
+        plt.title('Identified in {}, applied to {}, Cluster {:d}, p = {:.3e}'.format(participant_identified_in, 
+                                                                                participant_applied_to, 
+                                                                                int(ix_cluster), 
+                                                                                p_value))
+
+def plot_network_modulation_topo(df_network_results, n_conns, participant, info):
+    
+    """Plot modulated network as connections between sensors on a topoplot.
+
+    Parameters:
+    -----------
+    df_network_results: pandas.DataFrame
+        The dataframe containing the connections which were modulated at the 
+        participant- or group-level.
+    
+    n_conns : int
+        The number of connections to plot. The n_conns most strongly modulated
+        connections will be plotted.
+        
+    participant : str
+        The participant in which the modulated network was identified. Can be 'group'
+        for a group-level plot.
+        
+    info : mne.Info
+        The Info object for topographic plotting.
+    """
+    
+    df_network_results = df_network_results[df_network_results['participant'] == participant]
+        
+    colors = sns.color_palette("Set2")
+    sphere = _check_sphere(None, info)
+    pos, outlines = _get_pos_outlines(info, range(
+        len(info.ch_names)), sphere, to_sphere=True)
+    fig = plot_sensors(info, show_names=False, show=False)
+    fig.set_size_inches(12, 12)
+        
+    for ix_cluster, cluster in df_network_results.iterrows():
+        
+        t_values = cluster['t_values']          # this is one t-value per connection in cluster
+        p_value = cluster['p_value']            # this is one p-value for the cluster
+        connections = cluster['connections']    # this contains the indices marking connections between sensors in cluster
+        ixs_top_conns = np.argsort(t_values)[::-1][:n_conns]
+        
+        passed_label = False
+        for ix_conn in ixs_top_conns:
+            ix_ch_1, ix_ch_2 = connections[ix_conn]
+            x_coords = [pos[ix_ch_1][0],
+                        pos[ix_ch_2][0]]
+            y_coords = [pos[ix_ch_1][1],
+                        pos[ix_ch_2][1]]
+            if not passed_label:
+                label = 'Cluster {:d}'.format(int(ix_cluster))
+                passed_label = True
+            else:
+                label = None
+            plt.plot(x_coords, y_coords, c=colors[ix_cluster], label=label)
+    plt.legend(frameon=False)
+    plt.title('Identified in {}'.format(participant))
+    plt.tight_layout()
+    
+def plot_modulation_amp_corr(df_amp_phase_results):
+    
+    """Plot correlation of amplitude (depth) of modulation of two 
+    outcome measures cross participants.
+
+    Parameters:
+    -----------
+    df_amp_phase_results: pandas.DataFrame
+        The dataframe containing the amplitude (depth) of modulation
+        for each participant and outcome measure.
+    """
+    
+    # TODO
+    # Do for all clusters in dataframe

@@ -43,6 +43,14 @@ def _circmean(phase):
 def _pli(phase1, phase2):
     return np.mean(np.sign(_wrap(phase1 - phase2)))
 
+def _fmt(string):
+    return string.replace(
+        '_',
+        ' ').title().replace(
+        ' Of ',
+        ' of ').replace(
+            ' And ',
+        ' and ')
 
 def _get_trial_target_codes_cwm_error(raw):
     events = mne.events_from_annotations(raw)[0]
@@ -324,3 +332,31 @@ def save_calibration_data(obj, folder_path, phase_delay=None):
         
         data_dict = {'phase_delay':phase_delay}
         savemat(phase_delay_file_path, data_dict)
+        
+
+def df_to_array(df_data):
+    """
+    Convert a DataFrame containing one data point (trial or participant) per row to an ndarray.
+
+    Parameters:
+    -----------
+    df_data : pandas.DataFrame
+        The DataFrame object containing the data to convert.
+
+    Returns:
+    --------
+    numpy.ndarray
+        An ndarray of shape (n_phases, n_datapoints, ...).
+    """
+    
+    gb_target_phases = df_data.sort_values(
+        'target_phase').groupby('target_phase')
+    target_phases = []
+    data = []
+    for target_phase, df_target_phase in gb_target_phases:
+        target_phases.append(target_phase)
+        data.append(np.stack(df_target_phase['value']))
+    n_epochs = np.min([d.shape[0] for d in data])
+    data = np.array([d[:n_epochs] for d in data])
+    # data is now (n_phases, n_epochs, ...)
+    return data, target_phases

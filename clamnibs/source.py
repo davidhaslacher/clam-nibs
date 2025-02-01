@@ -12,16 +12,10 @@ from scipy.stats import ttest_ind
 import emd
 from math import degrees
 from scipy.stats import f_oneway
-from fooof import FOOOF
 from mne.time_frequency import psd_array_welch
 from .misc import _get_ixs_goods, _get_main_target_phase
 from .base import RawCLAM, EpochsCLAM
 from .beamformer import get_target
-
-
-# TODO:
-# Brain - heart coupling
-
 
 def compute_phase_tracking(raw, plot=False):
     
@@ -120,40 +114,6 @@ def compute_phase_tracking(raw, plot=False):
         [tp - ap for tp, ap in zip(target_phases, mean_actual_phases)])
     return phase_delay
 
-
-def _get_fooof_amplitude(
-        data,
-        sfreq,
-        l_freq,
-        h_freq,
-        l_freq_target,
-        h_freq_target):
-    psd, freqs = psd_array_welch(data, sfreq, l_freq, h_freq, data.shape[-1])
-    fm = FOOOF(verbose=False)
-    fm.fit(freqs, psd)
-    peak_params = fm.get_results().peak_params
-    peak_params = peak_params[(peak_params[:, 0] > l_freq_target) & (
-        peak_params[:, 0] < h_freq_target)]
-    amp = np.max(peak_params[:, 1])
-    return amp
-
-
-def _get_hht_amplitude(
-        data,
-        sfreq,
-        l_freq,
-        h_freq,
-        l_freq_target,
-        h_freq_target):
-    imf = emd.sift.mask_sift(data, max_imfs=4)
-    IP, IF, IA = emd.spectra.frequency_transform(imf, sfreq, 'hilbert')
-    freqs_carrier, hht = emd.spectra.hilberthuang(
-        IF, IA, (l_freq, h_freq, int(2.5 * (h_freq - l_freq))))
-    amp = hht[(freqs_carrier > l_freq_target) & (
-        freqs_carrier < h_freq_target)].max()
-    return amp
-
-
 def compute_single_trial_amplitude(raw, measure='hilbert_amp'):
     
     """
@@ -165,8 +125,6 @@ def compute_single_trial_amplitude(raw, measure='hilbert_amp'):
         The RawCLAM object containing the raw data to analyze.
     measure : str, optional
         The method used to compute amplitude modulation. It can be one of the following:
-            - 'hht_amp': Amplitude estimation based on Hilbert-Huang Transform.
-            - 'fooof_amp': Amplitude estimation based on FOOOF algorithm.
             - 'hilbert_amp': Amplitude estimation based on Hilbert transform (default).
 
     Returns:
@@ -196,12 +154,9 @@ def compute_single_trial_amplitude(raw, measure='hilbert_amp'):
     design = raw.design
     events = mne.events_from_annotations(raw)[0]
 
-    if measure not in ['hht_amp', 'fooof_amp', 'hilbert_amp']:
+    if measure not in ['hilbert_amp']:
         raise Exception(
-            'Method to compute amplitude must be \'hht_amp\', \'fooof_amp\', or \'hilbert_amp\'')
-    if (l_freq > 1 or h_freq < 30) and measure in ['hht_amp', 'fooof_amp']:
-        raise Exception(
-            'Raw object must have a passband of at least 1 - 30 Hz for amplitude estimation based on HHT or FOOOF')
+            'Method to compute amplitude must be \'hilbert_amp\'')
     if not (l_freq == l_freq_target and h_freq ==
             h_freq_target) and measure == 'hilbert_amp':
         raise Exception(
@@ -214,23 +169,7 @@ def compute_single_trial_amplitude(raw, measure='hilbert_amp'):
         target_hil = target_hil[None, :, :]
     epoch_amps = []
     for epoch_hil in target_hil:
-        if measure == 'hht_amp':
-            amp = _get_hht_amplitude(
-                np.real(epoch_hil),
-                sfreq,
-                l_freq,
-                h_freq,
-                l_freq_target,
-                h_freq_target)
-        elif measure == 'fooof_amp':
-            amp = _get_fooof_amplitude(
-                np.real(epoch_hil),
-                sfreq,
-                l_freq,
-                h_freq,
-                l_freq_target,
-                h_freq_target)
-        else:
+        if measure == 'hilbert_amp':
             amp = np.mean(np.abs(epoch_hil))
         epoch_amps.append(amp)
     if design == 'trial_wise':
@@ -245,50 +184,30 @@ def compute_single_trial_amplitude(raw, measure='hilbert_amp'):
                               'value': epoch_amps})
     return df_result
 
-
-def _get_fooof_exponent(
-        data,
-        sfreq,
-        l_freq,
-        h_freq,
-        l_freq_target,
-        h_freq_target):
-    psd, freqs = psd_array_welch(data, sfreq, l_freq, h_freq, data.shape[-1])
-    fm = FOOOF(verbose=False)
-    fm.fit(freqs, psd)
-    ap = fm.get_results().aperiodic_params[-1]
-    return ap
-
-
-def compute_single_trial_aperiodic(raw, measure='fooof_ae'):
+def compute_single_trial_psd(raw):
     
     """
-    Compute single-trial aperiodic exponent of activity in target and assign it to CLAM-NIBS target phase.
+    Compute power spectral density of single-trial target oscillation and assign it to CLAM-NIBS target phase.
 
     Parameters:
     -----------
     raw : RawCLAM
         The RawCLAM object containing the raw data to analyze.
-    measure : str, optional
-        The method used to compute the aperiodic exponent. It can only be 'fooof_ae' (default).
-    plot : bool, optional
-        Whether to plot the aperiodic modulation results (default is False).
 
     Returns:
     --------
     pandas.DataFrame
-        A DataFrame containing the computed aperiodic exponent along with CLAM-NIBS target phase for each epoch.
+        A DataFrame containing the computed power spectral density along with CLAM-NIBS target phase for each epoch.
 
     Raises:
     -------
     Exception
         If the input raw data is not of type RawCLAM.
-        If the method for computing the aperiodic exponent is not supported.
         If the Raw object does not meet the requirements for the chosen method.
     """
     
     if not isinstance(raw, RawCLAM):
-        raise Exception('compute_single_trial_aperiodic can only be applied to RawCLAM objects')
+        raise Exception('compute_single_trial_psd can only be applied to RawCLAM objects')
 
     sfreq = raw.info['sfreq']
     l_freq = raw.info['highpass']
@@ -301,129 +220,35 @@ def compute_single_trial_aperiodic(raw, measure='fooof_ae'):
     design = raw.design
     events = mne.events_from_annotations(raw)[0]
 
-    if measure not in ['fooof_ae']:
+    if (l_freq > 1 or h_freq < 30):
         raise Exception(
-            'Method to compute aperiodic exponent must be \'fooof_ae\'')
-    if (l_freq > 1 or h_freq < 30) and measure in ['fooof_ae']:
-        raise Exception(
-            'Raw object must have a passband of at least 1 - 30 Hz for aperiodic exponent estimation based on FOOOF')
+            'Raw object must have a passband of at least 1 - 30 Hz for power spectral density estimation')
     if design == 'trial_wise':
-        epochs = EpochsCLAM(raw)
-        target_hil = get_target(epochs)
+        epochs = EpochsCLAM(raw, apply_hil=False)
+        target = get_target(epochs)
     else:
-        target_hil = get_target(raw.copy().apply_hilbert())
-        target_hil = target_hil[None, :, :]
-    epoch_aes = []
-    for epoch_hil in target_hil:
-        ap = _get_fooof_exponent(
-            np.real(epoch_hil),
-            sfreq,
-            l_freq,
-            h_freq,
-            l_freq_target,
-            h_freq_target)
-        epoch_aes.append(ap)
+        target = get_target(raw)
+        target = target[None, :, :]
+    assert np.isrealobj(target)
+    epoch_psds = []
+    for epoch in target:
+        psd, freqs = psd_array_welch(x=epoch, 
+                                     sfreq=sfreq,
+                                     fmin=1, 
+                                     fmax=30, 
+                                     n_fft=np.min([epoch.shape[-1], int(2*sfreq)]))
+        epoch_psds.append(psd)
     if design == 'trial_wise':
         epoch_target_phases = [marker_definition.get(x) for x in epochs.events[:, 2]]
     else:
         epoch_target_phases = [_get_main_target_phase(marker_definition, events)]
-    df_result = pd.DataFrame({'participant': [participant] * len(epoch_aes),
-                              'session': [session] * len(epoch_aes),
-                              'design': [design] * len(epoch_aes),
+    df_result = pd.DataFrame({'participant': [participant] * len(epoch_psds),
+                              'session': [session] * len(epoch_psds),
+                              'design': [design] * len(epoch_psds),
                               'target_phase': epoch_target_phases,
-                              'measure': [measure] * len(epoch_aes),
-                              'value': epoch_aes})
-    return df_result
-
-
-def _get_fooof_frequency(
-        data,
-        sfreq,
-        l_freq,
-        h_freq,
-        l_freq_target,
-        h_freq_target):
-    psd, freqs = psd_array_welch(data, sfreq, l_freq, h_freq, data.shape[-1])
-    fm = FOOOF(verbose=False)
-    fm.fit(freqs, psd)
-    peak_params = fm.get_results().peak_params
-    peak_params = peak_params[(peak_params[:, 0] > l_freq_target) & (
-        peak_params[:, 0] < h_freq_target)]
-    pf = peak_params[np.argmax(peak_params[:, 1])][0]
-    return pf
-
-
-def compute_single_trial_frequency(raw, measure='fooof_pf'):
-    
-    """
-    Compute frequency of single-trial target oscillation and assign it to CLAM-NIBS target phase.
-
-    Parameters:
-    -----------
-    raw : RawCLAM
-        The RawCLAM object containing the raw data to analyze.
-    measure : str, optional
-        The method used to compute the peak frequency. It can only be 'fooof_pf' (default).
-    plot : bool, optional
-        Whether to plot the frequency modulation results (default is False).
-
-    Returns:
-    --------
-    pandas.DataFrame
-        A DataFrame containing the computed peak frequency values along with CLAM-NIBS target phase for each epoch.
-
-    Raises:
-    -------
-    Exception
-        If the input raw data is not of type RawCLAM.
-        If the method for computing the peak frequency is not supported.
-        If the Raw object does not meet the requirements for the chosen method.
-    """
-    
-    if not isinstance(raw, RawCLAM):
-        raise Exception('compute_single_trial_frequency can only be applied to RawCLAM objects')
-
-    sfreq = raw.info['sfreq']
-    l_freq = raw.info['highpass']
-    h_freq = raw.info['lowpass']
-    l_freq_target = raw.l_freq_target
-    h_freq_target = raw.h_freq_target
-    marker_definition = raw.marker_definition
-    participant = raw.participant
-    session = raw.session
-    design = raw.design
-    events = mne.events_from_annotations(raw)[0]
-
-    if measure not in ['fooof_pf']:
-        raise Exception(
-            'Method to compute peak frequency must be \'fooof_pf\'')
-    if (l_freq > 1 or h_freq < 30) and measure in ['fooof_pf']:
-        raise Exception(
-            'Raw object must have a passband of at least 1 - 30 Hz for peak frequency estimation based on FOOOF')
-    if design == 'trial_wise':
-        epochs = EpochsCLAM(raw)
-        target_hil = get_target(epochs)
-    else:
-        target_hil = get_target(raw.copy().apply_hilbert())
-        target_hil = target_hil[None, :, :]
-    epoch_pfs = []
-    for epoch_hil in target_hil:
-        ap = _get_fooof_frequency(
-            np.real(epoch_hil),
-            sfreq,
-            l_freq,
-            h_freq,
-            l_freq_target,
-            h_freq_target)
-        epoch_pfs.append(ap)
-    if design == 'trial_wise':
-        epoch_target_phases = [marker_definition.get(x) for x in epochs.events[:, 2]]
-    else:
-        epoch_target_phases = [_get_main_target_phase(marker_definition, events)]
-    df_result = pd.DataFrame({'participant': [participant] * len(epoch_pfs),
-                              'session': [session] * len(epoch_pfs),
-                              'design': [design] * len(epoch_pfs),
-                              'target_phase': epoch_target_phases,
-                              'measure': [measure] * len(epoch_pfs),
-                              'value': epoch_pfs})
+                              'measure': ['psd'] * len(epoch_psds),
+                              'value': epoch_psds})
+    df_result.attrs['freqs'] = freqs
+    df_result.attrs['l_freq_target'] = l_freq_target
+    df_result.attrs['h_freq_target'] = h_freq_target
     return df_result

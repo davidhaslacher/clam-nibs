@@ -4,6 +4,10 @@ from os.path import dirname, basename, exists, join
 import numpy as np
 from scipy.io import loadmat
 from mne import Epochs
+from mne.viz import plot_topomap
+from mne.time_frequency import psd_array_welch
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 class RawCLAM(RawBrainVision):
 
@@ -143,8 +147,36 @@ class RawCLAM(RawBrainVision):
             
             from . import beamformer
             beamformer.set_flip(self)
-        
-
+            
+    def plot_forward(self, sensors=False):
+        from .misc import _get_ixs_goods
+        from .beamformer import _get_lcmv_weights
+        l_freq = self.info['highpass']
+        h_freq = self.info['lowpass']
+        if l_freq > 1 or h_freq < 40:
+            raise Exception(
+                'Forward model can only be plotted on data containing at least 1 - 40 Hz')
+        ixs_good = _get_ixs_goods(self)
+        info_plot = mne.pick_info(self.info, ixs_good)
+        names = info_plot.ch_names if sensors else None
+        forward = self.forward_full[ixs_good]
+        plot_topomap(forward, info_plot, sensors=sensors, names=names, size=4, contours=0, show=False)
+        data_broad = self.copy().filter(1, 40).get_data(ixs_good)
+        COV = np.cov(data_broad)
+        w = _get_lcmv_weights(COV, forward)
+        psd, freqs = psd_array_welch(
+            w @ data_broad, self.info['sfreq'], fmin=1, fmax=40, n_fft=int(3 * self.info['sfreq']))
+        fig, axes = plt.subplots(1, 2, figsize=(14, 7), gridspec_kw={'width_ratios': [1, 1]})
+        axes[0].semilogy(freqs, psd.flatten(), c='k')
+        axes[0].tick_params(axis='x', labelsize=8)
+        axes[0].tick_params(axis='y', labelsize=5)
+        axes[0].axvline(
+            self.l_freq_target, color='grey', linestyle='--', linewidth=0.5)
+        axes[0].axvline(
+            self.h_freq_target, color='grey', linestyle='--', linewidth=0.5)
+        plot_topomap(forward, mne.pick_info(self.info, ixs_good), axes=axes[1], 
+                sensors=False, contours=0, show=False)
+        sns.despine()
 
 class EpochsCLAM(Epochs):
     
