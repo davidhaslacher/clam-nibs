@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>clamnibs &#8212; CLAM-NIBS  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=27fed22d" />
+    <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="clamnibs">
+<h1>clamnibs<a class="headerlink" href="#clamnibs" title="Link to this heading">¶</a></h1>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="clamnibs.html">clamnibs package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="clamnibs.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="clamnibs.html#module-clamnibs.base">clamnibs.base module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="clamnibs.html#clamnibs.base.EpochsCLAM"><code class="docutils literal notranslate"><span class="pre">EpochsCLAM</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="clamnibs.html#clamnibs.base.RawCLAM"><code class="docutils literal notranslate"><span class="pre">RawCLAM</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="clamnibs.html#clamnibs.base.RawCLAM.plot_forward"><code class="docutils literal notranslate"><span class="pre">RawCLAM.plot_forward()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="clamnibs.html#module-clamnibs.beamformer">clamnibs.beamformer module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="clamnibs.html#clamnibs.beamformer.get_target"><code class="docutils literal notranslate"><span class="pre">get_target()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="clamnibs.html#clamnibs.beamformer.set_flip"><code class="docutils literal notranslate"><span class="pre">set_flip()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="clamnibs.html#clamnibs.beamformer.set_forward"><code class="docutils literal notranslate"><span class="pre">set_forward()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="clamnibs.html#module-clamnibs.misc">clamnibs.misc module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="clamnibs.html#clamnibs.misc.compute_single_trial_behavior"><code class="docutils literal notranslate"><span class="pre">compute_single_trial_behavior()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="clamnibs.html#clamnibs.misc.compute_single_trial_rr"><code class="docutils literal notranslate"><span class="pre">compute_single_trial_rr()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="clamnibs.html#clamnibs.misc.compute_single_trial_scr"><code class="docutils literal notranslate"><span class="pre">compute_single_trial_scr()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="clamnibs.html#clamnibs.misc.df_to_array"><code class="docutils literal notranslate"><span class="pre">df_to_array()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="clamnibs.html#clamnibs.misc.save_calibration_data"><code class="docutils literal notranslate"><span class="pre">save_calibration_data()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="clamnibs.html#module-clamnibs.sensor">clamnibs.sensor module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="clamnibs.html#clamnibs.sensor.clean_sensor_data"><code class="docutils literal notranslate"><span class="pre">clean_sensor_data()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="clamnibs.html#clamnibs.sensor.compute_single_trial_connectivity"><code class="docutils literal notranslate"><span class="pre">compute_single_trial_connectivity()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="clamnibs.html#module-clamnibs.source">clamnibs.source module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="clamnibs.html#clamnibs.source.compute_phase_tracking"><code class="docutils literal notranslate"><span class="pre">compute_phase_tracking()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="clamnibs.html#clamnibs.source.compute_single_trial_amplitude"><code class="docutils literal notranslate"><span class="pre">compute_single_trial_amplitude()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="clamnibs.html#clamnibs.source.compute_single_trial_psd"><code class="docutils literal notranslate"><span class="pre">compute_single_trial_psd()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="clamnibs.html#module-clamnibs.stats">clamnibs.stats module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="clamnibs.html#clamnibs.stats.get_network_modulation_amp_phase"><code class="docutils literal notranslate"><span class="pre">get_network_modulation_amp_phase()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="clamnibs.html#clamnibs.stats.test_modulation"><code class="docutils literal notranslate"><span class="pre">test_modulation()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="clamnibs.html#clamnibs.stats.test_modulation_psd"><code class="docutils literal notranslate"><span class="pre">test_modulation_psd()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="clamnibs.html#clamnibs.stats.test_sensor_cluster_modulation"><code class="docutils literal notranslate"><span class="pre">test_sensor_cluster_modulation()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="clamnibs.html#clamnibs.stats.test_sensor_network_modulation"><code class="docutils literal notranslate"><span class="pre">test_sensor_network_modulation()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="clamnibs.html#module-clamnibs.viz">clamnibs.viz module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="clamnibs.html#clamnibs.viz.plot_modulation_amp_corr"><code class="docutils literal notranslate"><span class="pre">plot_modulation_amp_corr()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="clamnibs.html#clamnibs.viz.plot_network_modulation_topo"><code class="docutils literal notranslate"><span class="pre">plot_network_modulation_topo()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="clamnibs.html#clamnibs.viz.plot_network_modulation_values"><code class="docutils literal notranslate"><span class="pre">plot_network_modulation_values()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="clamnibs.html#clamnibs.viz.set_bads"><code class="docutils literal notranslate"><span class="pre">set_bads()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="clamnibs.html#module-clamnibs">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">CLAM-NIBS</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2025, David Haslacher.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/source/modules.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

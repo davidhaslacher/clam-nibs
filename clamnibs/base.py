@@ -61,8 +61,8 @@ class RawCLAM(RawBrainVision):
     def __init__(
             self,
             path,
-            l_freq_target,
-            h_freq_target,
+            l_freq_target = None,
+            h_freq_target = None,
             tmin = None,
             tmax = None,
             n_chs=64,
@@ -80,11 +80,18 @@ class RawCLAM(RawBrainVision):
             ignore_calibration_files = False,
             default_bads=['Fp1', 'Fpz', 'Fp2', 'F9', 'FT9', 'TP9', 'F10', 'FT10', 'TP10']):
         super().__init__(path, preload=True)
+        folder_path = dirname(path)
         self.n_chs = n_chs
         if sfreq is not None:
             self.resample(sfreq)
+        freq_lims_file_path = join(folder_path, 'freq_lims.mat')
+        if exists(freq_lims_file_path):
+            self.l_freq_target, self.h_freq_target = loadmat(freq_lims_file_path)['freq_lims']
+            print('Using target frequency range from file ({:.1f} - {:.1f} Hz)'.format(self.l_freq_target, self.h_freq_target))
+        else:
+            self.l_freq_target, self.h_freq_target = l_freq_target, h_freq_target
+            print('Using target frequency range from parameters ({:.1f} - {:.1f} Hz)'.format(self.l_freq_target, self.h_freq_target))
         self.filter(l_freq_target, h_freq_target, picks=['envelope'])
-        folder_path = dirname(path)
         misc_channels = [ch for ch in misc_channels if ch in self.ch_names]
         if 'no_stim' in path.lower():
             self.is_stim = False
@@ -94,8 +101,6 @@ class RawCLAM(RawBrainVision):
         self.set_channel_types({
             **{ch: 'ecg' for ch in ecg_channels},
             **{ch: 'misc' for ch in misc_channels}})
-        self.l_freq_target = l_freq_target
-        self.h_freq_target = h_freq_target
         
         if marker_definition:
             if tmin is None or tmax is None:
@@ -160,7 +165,6 @@ class RawCLAM(RawBrainVision):
         info_plot = mne.pick_info(self.info, ixs_good)
         names = info_plot.ch_names if sensors else None
         forward = self.forward_full[ixs_good]
-        plot_topomap(forward, info_plot, sensors=sensors, names=names, size=4, contours=0, show=False)
         data_broad = self.copy().filter(1, 40).get_data(ixs_good)
         COV = np.cov(data_broad)
         w = _get_lcmv_weights(COV, forward)
@@ -174,8 +178,12 @@ class RawCLAM(RawBrainVision):
             self.l_freq_target, color='grey', linestyle='--', linewidth=0.5)
         axes[0].axvline(
             self.h_freq_target, color='grey', linestyle='--', linewidth=0.5)
+        axes[0].set_title('Power Spectrum')
+        axes[0].set_xlabel('Frequency (Hz)')
+        axes[0].set_ylabel('Power (a.u.)')
         plot_topomap(forward, mne.pick_info(self.info, ixs_good), axes=axes[1], 
                 sensors=False, contours=0, show=False)
+        axes[1].set_title('Forward Model')
         sns.despine()
 
 class EpochsCLAM(Epochs):

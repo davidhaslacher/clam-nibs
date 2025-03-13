@@ -749,6 +749,7 @@ def test_modulation_psd(
         df_data,
         test_level='participant',
         measure='power',
+        freq_lim_tol=0,
         plot=False,
         plot_mode='box_strip'):
     
@@ -768,6 +769,10 @@ def test_modulation_psd(
         
     measure : str, optional (default='power')
         The outcome measure employed ('power', 'frequency', or 'aperiodic').
+        
+    freq_lim_tol : float, optional (default=0)
+        The tolerance by which assessed peaks in the power spectrum can deviate in 
+        frequency from the target frequency range set in the data.
         
     plot : str or bool, optional (default=False)
         If string, the plot(s) will be saved at that path.
@@ -792,10 +797,10 @@ def test_modulation_psd(
         raise Exception('Only power, frequency, and aperiodic exponent are supported')
     df_data = df_data[df_data['measure'] == 'psd']
     if test_level == 'participant':
-        df_results = _test_modulation_participant_psd(df_data=df_data, measure=measure, plot=plot)
+        df_results = _test_modulation_participant_psd(df_data=df_data, measure=measure, freq_lim_tol=freq_lim_tol, plot=plot)
         return df_results
     elif test_level == 'group':
-        df_results = _test_modulation_psd_group(df_data=df_data, measure=measure, plot=plot)
+        df_results = _test_modulation_psd_group(df_data=df_data, measure=measure, freq_lim_tol=freq_lim_tol, plot=plot)
         return df_results
     else:
         raise Exception(
@@ -830,7 +835,7 @@ def _fooof_stat(x, measure, freqs, l_freq_target, h_freq_target, stat):
     elif stat == 'dft':
         return _dft(agg_measures)[0]
 
-def _test_modulation_participant_psd(df_data, measure, plot):
+def _test_modulation_participant_psd(df_data, measure, freq_lim_tol, plot):
     df_results = pd.DataFrame()
     participants = df_data['participant'].unique()
     for participant in participants:
@@ -850,8 +855,8 @@ def _test_modulation_participant_psd(df_data, measure, plot):
         stat_fun = partial(_fooof_stat, 
                            measure=measure,  
                            freqs=df_data.attrs['freqs'], 
-                           l_freq_target=df_data.attrs['l_freq_target'], 
-                           h_freq_target=df_data.attrs['h_freq_target'],
+                           l_freq_target=df_data.attrs['l_freq_target'] - freq_lim_tol, 
+                           h_freq_target=df_data.attrs['h_freq_target'] + freq_lim_tol,
                            stat=stat)
         res = permutation_test(target_psds,
                                 lambda *x: stat_fun(x),
@@ -868,8 +873,8 @@ def _test_modulation_participant_psd(df_data, measure, plot):
             y = _fooof_agg(target_psds, 
                            measure=measure, 
                            freqs=df_data.attrs['freqs'], 
-                           l_freq_target=df_data.attrs['l_freq_target'], 
-                           h_freq_target=df_data.attrs['h_freq_target'])
+                           l_freq_target=df_data.attrs['l_freq_target'] - freq_lim_tol, 
+                           h_freq_target=df_data.attrs['h_freq_target'] + freq_lim_tol)
             df_plot = pd.DataFrame(
                 {'Target Phase (°)': x, '{}'.format(measure): y})
             sns.barplot(
@@ -902,7 +907,7 @@ def _test_modulation_participant_psd(df_data, measure, plot):
         df_results = pd.concat([df_results, df_append])
     return df_results
 
-def _test_modulation_psd_group(df_data, measure, plot):
+def _test_modulation_psd_group(df_data, measure, freq_lim_tol, plot):
     gb_target_phase = df_data.groupby('target_phase')
     target_phases = []
     target_psds = []
@@ -918,8 +923,8 @@ def _test_modulation_psd_group(df_data, measure, plot):
     stat_fun = partial(_fooof_stat, 
                         measure=measure, 
                         freqs=df_data.attrs['freqs'], 
-                        l_freq_target=df_data.attrs['l_freq_target'], 
-                        h_freq_target=df_data.attrs['h_freq_target'],
+                        l_freq_target=df_data.attrs['l_freq_target'] - freq_lim_tol, 
+                        h_freq_target=df_data.attrs['h_freq_target'] + freq_lim_tol,
                         stat=stat)
     res = permutation_test(target_psds,
                             lambda *x: stat_fun(x),
@@ -936,8 +941,8 @@ def _test_modulation_psd_group(df_data, measure, plot):
         y = _fooof_agg(target_psds, 
                         measure=measure, 
                         freqs=df_data.attrs['freqs'], 
-                        l_freq_target=df_data.attrs['l_freq_target'], 
-                        h_freq_target=df_data.attrs['h_freq_target'])
+                        l_freq_target=df_data.attrs['l_freq_target'] - freq_lim_tol, 
+                        h_freq_target=df_data.attrs['h_freq_target'] + freq_lim_tol)
         df_plot = pd.DataFrame(
             {'Target Phase (°)': x, '{}'.format(measure): y})
         sns.barplot(

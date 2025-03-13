@@ -117,7 +117,7 @@ def compute_phase_tracking(raw, plot=False):
 def compute_single_trial_amplitude(raw, measure='hilbert_amp'):
     
     """
-    Compute single-trial amplitude of target oscillation and assign it to CLAM-NIBS target phase.
+    Compute single-trial amplitude of target oscillation for each CLAM-NIBS target phase.
 
     Parameters:
     -----------
@@ -187,7 +187,7 @@ def compute_single_trial_amplitude(raw, measure='hilbert_amp'):
 def compute_single_trial_psd(raw):
     
     """
-    Compute power spectral density of single-trial target oscillation and assign it to CLAM-NIBS target phase.
+    Compute single-trial power spectral density of target oscillation for each CLAM-NIBS target phase.
 
     Parameters:
     -----------

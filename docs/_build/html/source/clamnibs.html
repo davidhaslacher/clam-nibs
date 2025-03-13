@@ -1,0 +1,880 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>clamnibs package &#8212; CLAM-NIBS  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=27fed22d" />
+    <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="clamnibs-package">
+<h1>clamnibs package<a class="headerlink" href="#clamnibs-package" title="Link to this heading">¶</a></h1>
+<section id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Link to this heading">¶</a></h2>
+</section>
+<section id="module-clamnibs.base">
+<span id="clamnibs-base-module"></span><h2>clamnibs.base module<a class="headerlink" href="#module-clamnibs.base" title="Link to this heading">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="clamnibs.base.EpochsCLAM">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">clamnibs.base.</span></span><span class="sig-name descname"><span class="pre">EpochsCLAM</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">raw</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">apply_hil</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#clamnibs.base.EpochsCLAM" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Epochs</span></code></p>
+<p>Initialize an EpochsCLAM object.</p>
+<section id="parameters">
+<h3>Parameters:<a class="headerlink" href="#parameters" title="Link to this heading">¶</a></h3>
+<dl class="simple">
+<dt>raw<span class="classifier">RawCLAM object</span></dt><dd><p>The EEG data.</p>
+</dd>
+<dt>apply_hil<span class="classifier">bool</span></dt><dd><p>Whether to apply Hilbert transformation to the EEG data to obtain the analytic signal.</p>
+</dd>
+</dl>
+</section>
+<section id="notes">
+<h3>Notes:<a class="headerlink" href="#notes" title="Link to this heading">¶</a></h3>
+<p>This class extends Epochs and provides additional functionality specific to CLAM-NIBS experiments.</p>
+</section>
+<section id="attributes">
+<h3>Attributes:<a class="headerlink" href="#attributes" title="Link to this heading">¶</a></h3>
+<dl class="simple">
+<dt>design<span class="classifier">str</span></dt><dd><p>The experimental design type (‘trial_wise’ or ‘session_wise’).</p>
+</dd>
+<dt>l_freq_target<span class="classifier">float</span></dt><dd><p>Lower edge of the target frequency range (in Hz).</p>
+</dd>
+<dt>h_freq_target<span class="classifier">float</span></dt><dd><p>Higher edge of the target frequency range (in Hz).</p>
+</dd>
+<dt>marker_definition<span class="classifier">dict</span></dt><dd><p>Dictionary containing marker definitions.
+Mapping from target phase markers (e.g. 1 - 6) to target phases [-pi, pi].</p>
+</dd>
+<dt>is_stim<span class="classifier">bool</span></dt><dd><p>Indicates whether the data was recorded in the presence of CLAM-NIBS or not.</p>
+</dd>
+<dt>participant<span class="classifier">str</span></dt><dd><p>Participant identifier.</p>
+</dd>
+<dt>session<span class="classifier">str</span></dt><dd><p>Session identifier.</p>
+</dd>
+<dt>forward_full<span class="classifier">ndarray or None</span></dt><dd><p>Forward model for all EEG channels (with zero for bads).</p>
+</dd>
+<dt>flip<span class="classifier">integer</span></dt><dd><p>Sign flip for dipole (-1 or 1).</p>
+</dd>
+</dl>
+</section>
+<section id="raises">
+<h3>Raises:<a class="headerlink" href="#raises" title="Link to this heading">¶</a></h3>
+<p>None</p>
+</section>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="clamnibs.base.RawCLAM">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">clamnibs.base.</span></span><span class="sig-name descname"><span class="pre">RawCLAM</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">l_freq_target</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">h_freq_target</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tmin</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tmax</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_chs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">64</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">design</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'trial_wise'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ecg_channels</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">misc_channels</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">['envelope',</span> <span class="pre">'envelope_am']</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">marker_definition</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">{1:</span> <span class="pre">0.0,</span> <span class="pre">2:</span> <span class="pre">1.0471975511965976,</span> <span class="pre">3:</span> <span class="pre">2.0943951023931953,</span> <span class="pre">4:</span> <span class="pre">3.141592653589793,</span> <span class="pre">5:</span> <span class="pre">4.1887902047863905,</span> <span class="pre">6:</span> <span class="pre">5.235987755982989}</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sfreq</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ignore_calibration_files</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">default_bads</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">['Fp1',</span> <span class="pre">'Fpz',</span> <span class="pre">'Fp2',</span> <span class="pre">'F9',</span> <span class="pre">'FT9',</span> <span class="pre">'TP9',</span> <span class="pre">'F10',</span> <span class="pre">'FT10',</span> <span class="pre">'TP10']</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#clamnibs.base.RawCLAM" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">RawBrainVision</span></code></p>
+<p>Initialize a RawCLAM object.</p>
+<section id="id1">
+<h3>Parameters:<a class="headerlink" href="#id1" title="Link to this heading">¶</a></h3>
+<dl class="simple">
+<dt>path<span class="classifier">str</span></dt><dd><p>The path to the BrainVision header file (.vhdr).</p>
+</dd>
+<dt>l_freq_target<span class="classifier">float</span></dt><dd><p>Lower edge of the target frequency range.</p>
+</dd>
+<dt>h_freq_target<span class="classifier">float</span></dt><dd><p>Higher edge of the target frequency range.</p>
+</dd>
+<dt>tmin<span class="classifier">float or None, optional</span></dt><dd><p>For ‘trial_wise’ designs, this is the start time of the trial relative to the target phase marker.
+Required paramter when trigger markers are provided (e.g. marker_definition != {}).</p>
+</dd>
+<dt>tmax<span class="classifier">float or None, optional</span></dt><dd><p>For ‘trial_wise’ designs, this is the end time of the trial relative to the target phase marker.
+Required paramter when trigger markers are provided (e.g. marker_definition != {}).</p>
+</dd>
+<dt>n_chs<span class="classifier">int, optional</span></dt><dd><p>Number of EEG channels in the data (including bads).</p>
+</dd>
+<dt>design<span class="classifier">str, optional</span></dt><dd><p>The experimental design type.
+‘trial_wise’ means that multiple phase lags were tested in the session.
+‘session_wise’ means that a single phase lag was tested in the session (e.g. patient treatment).</p>
+</dd>
+<dt>misc_channels<span class="classifier">list, optional</span></dt><dd><p>List of miscellaneous channel names (not EEG or ECG).</p>
+</dd>
+<dt>marker_definition<span class="classifier">dict, optional</span></dt><dd><p>Dictionary containing marker definitions.
+Mapping from target phase markers (e.g. 1 - 6) to target phases [-pi, pi].
+Target phases can also take the values ‘ns’ (no stimulation) or ‘ol’ (open-loop stimulation).</p>
+</dd>
+<dt>sfreq<span class="classifier">float or None, optional</span></dt><dd><p>New sampling frequency, or None if the data should not be resampled.</p>
+</dd>
+<dt>ignore_calibration_files: bool, optional</dt><dd><p>If True, the user will be prompted to select bad channels and target spatial component regardless
+of the presence of calibration (.mat) files in the data folder</p>
+</dd>
+<dt>default_bads<span class="classifier">list of str, optional</span></dt><dd><p>The user may specify the list of channels that are marked bad by default in viz.set_bads</p>
+</dd>
+</dl>
+</section>
+<section id="id2">
+<h3>Notes:<a class="headerlink" href="#id2" title="Link to this heading">¶</a></h3>
+<p>This class extends RawBrainVision and provides additional functionality specific to CLAM-NIBS experiments.</p>
+</section>
+<section id="id3">
+<h3>Raises:<a class="headerlink" href="#id3" title="Link to this heading">¶</a></h3>
+<dl class="simple">
+<dt>Exception:</dt><dd><ul class="simple">
+<li><p>If data with CLAM-NIBS is loaded but no forward model is present in the data folder.</p></li>
+<li><p>If data with CLAM-NIBS is loaded but no dipole sign flip is present in the data folder.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="clamnibs.base.RawCLAM.plot_forward">
+<span class="sig-name descname"><span class="pre">plot_forward</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sensors</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#clamnibs.base.RawCLAM.plot_forward" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</section>
+</dd></dl>
+
+</section>
+<section id="module-clamnibs.beamformer">
+<span id="clamnibs-beamformer-module"></span><h2>clamnibs.beamformer module<a class="headerlink" href="#module-clamnibs.beamformer" title="Link to this heading">¶</a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="clamnibs.beamformer.get_target">
+<span class="sig-prename descclassname"><span class="pre">clamnibs.beamformer.</span></span><span class="sig-name descname"><span class="pre">get_target</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">obj</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#clamnibs.beamformer.get_target" title="Link to this definition">¶</a></dt>
+<dd><p>Compute the target signal from EEG data using LCMV beamforming.</p>
+<p>This function computes the target signal from EEG data using Linearly Constrained Minimum Variance (LCMV) beamforming [1].
+It extracts the target signal by spatially filtering the EEG data based on the forward model.</p>
+<section id="id4">
+<h3>Parameters:<a class="headerlink" href="#id4" title="Link to this heading">¶</a></h3>
+<dl class="simple">
+<dt>obj<span class="classifier">RawCLAM or EpochsCLAM object</span></dt><dd><p>The RawCLAM or EpochsCLAM object containing EEG data.</p>
+</dd>
+</dl>
+</section>
+<section id="returns">
+<h3>Returns:<a class="headerlink" href="#returns" title="Link to this heading">¶</a></h3>
+<dl class="simple">
+<dt>target<span class="classifier">ndarray</span></dt><dd><p>The target signal extracted from the EEG data using LCMV beamforming.</p>
+</dd>
+</dl>
+</section>
+<section id="id5">
+<h3>Raises:<a class="headerlink" href="#id5" title="Link to this heading">¶</a></h3>
+<dl class="simple">
+<dt>Exception:</dt><dd><p>If the input object is not an instance of RawCLAM or EpochsCLAM.</p>
+</dd>
+</dl>
+</section>
+<section id="references">
+<h3>References:<a class="headerlink" href="#references" title="Link to this heading">¶</a></h3>
+<dl class="simple">
+<dt>[1] Van Veen, Barry D., and Kevin M. Buckley. “Beamforming: A versatile approach to spatial filtering.”</dt><dd><p>IEEE assp magazine 5.2 (1988): 4-24.</p>
+</dd>
+</dl>
+</section>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="clamnibs.beamformer.set_flip">
+<span class="sig-prename descclassname"><span class="pre">clamnibs.beamformer.</span></span><span class="sig-name descname"><span class="pre">set_flip</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">obj</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plot</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#clamnibs.beamformer.set_flip" title="Link to this definition">¶</a></dt>
+<dd><p>Determine and set the dipole sign flip for the target signal.</p>
+<p>This method determines the dipole sign flip for the target signal based on its waveform asymmetry.
+It analyzes the phases of the target signal to determine whether the rising or falling phase is dominant (longer),
+and sets the flip factor accordingly.</p>
+<section id="id6">
+<h3>Parameters:<a class="headerlink" href="#id6" title="Link to this heading">¶</a></h3>
+<dl class="simple">
+<dt>obj<span class="classifier">RawCLAM or EpochsCLAM object</span></dt><dd><p>The RawCLAM or EpochsCLAM object containing EEG data.</p>
+</dd>
+<dt>plot<span class="classifier">bool, optional</span></dt><dd><p>Whether to plot the distribution of target signal phases and the result of flip determination. Default is False.</p>
+</dd>
+</dl>
+</section>
+<section id="id7">
+<h3>Returns:<a class="headerlink" href="#id7" title="Link to this heading">¶</a></h3>
+<p>None</p>
+</section>
+<section id="id8">
+<h3>Raises:<a class="headerlink" href="#id8" title="Link to this heading">¶</a></h3>
+<dl class="simple">
+<dt>Exception:</dt><dd><p>If the input object is not an instance of RawCLAM or EpochsCLAM.</p>
+</dd>
+</dl>
+</section>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="clamnibs.beamformer.set_forward">
+<span class="sig-prename descclassname"><span class="pre">clamnibs.beamformer.</span></span><span class="sig-name descname"><span class="pre">set_forward</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">raw</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">l_freq_noise</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">h_freq_noise</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_comp</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">4</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#clamnibs.beamformer.set_forward" title="Link to this definition">¶</a></dt>
+<dd><p>Compute and set the forward model for target source reconstruction.</p>
+<p>This method computes and sets the forward model necessary for LCMV beamforming.
+A data-driven approach called Spatio-Spectral Decomposition (SSD) [1] is used to
+find components in the signal that maximize power in the target frequency range
+while minimizing power in the noise frequency range.</p>
+<p>A component must be selected by the user by clicking on the respective power
+spectrum before closing the plot.</p>
+<section id="id9">
+<h3>Parameters:<a class="headerlink" href="#id9" title="Link to this heading">¶</a></h3>
+<dl class="simple">
+<dt>raw<span class="classifier">RawCLAM object</span></dt><dd><p>The RawCLAM object containing EEG data.</p>
+</dd>
+<dt>l_freq_noise<span class="classifier">float</span></dt><dd><p>Lower edge of the noise frequency range.</p>
+</dd>
+<dt>h_freq_noise<span class="classifier">float</span></dt><dd><p>Higher edge of the noise frequency range.</p>
+</dd>
+<dt>n_comp<span class="classifier">int, optional</span></dt><dd><p>Number of SSD components to plot. Default is 4.</p>
+</dd>
+</dl>
+</section>
+<section id="id10">
+<h3>Returns:<a class="headerlink" href="#id10" title="Link to this heading">¶</a></h3>
+<p>None</p>
+</section>
+<section id="id11">
+<h3>Raises:<a class="headerlink" href="#id11" title="Link to this heading">¶</a></h3>
+<dl class="simple">
+<dt>Exception:</dt><dd><p>If the input object is not an instance of RawCLAM.
+If the data does not contain frequencies of at least 1 - 40 Hz.
+If no target for stimulation (forward model) is selected by the user.</p>
+</dd>
+</dl>
+</section>
+<section id="id12">
+<h3>References:<a class="headerlink" href="#id12" title="Link to this heading">¶</a></h3>
+<dl class="simple">
+<dt>[1] Nikulin, Vadim V., Guido Nolte, and Gabriel Curio. “A novel method for reliable and fast extraction of neuronal</dt><dd><p>EEG/MEG oscillations on the basis of spatio-spectral decomposition.” NeuroImage 55.4 (2011): 1528-1535.</p>
+</dd>
+</dl>
+</section>
+</dd></dl>
+
+</section>
+<section id="module-clamnibs.misc">
+<span id="clamnibs-misc-module"></span><h2>clamnibs.misc module<a class="headerlink" href="#module-clamnibs.misc" title="Link to this heading">¶</a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="clamnibs.misc.compute_single_trial_behavior">
+<span class="sig-prename descclassname"><span class="pre">clamnibs.misc.</span></span><span class="sig-name descname"><span class="pre">compute_single_trial_behavior</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">raw</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">measure</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'binary_accuracy'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">correct_codes</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[10]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">incorrect_codes</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[11,</span> <span class="pre">12]</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#clamnibs.misc.compute_single_trial_behavior" title="Link to this definition">¶</a></dt>
+<dd><p>Compute single-trial task performance and assign it to CLAM-NIBS target phase.
+Applicable to any task with trial-by-trial responses.</p>
+<section id="id13">
+<h3>Parameters:<a class="headerlink" href="#id13" title="Link to this heading">¶</a></h3>
+<dl class="simple">
+<dt>raw<span class="classifier">RawCLAM</span></dt><dd><p>The RawCLAM object containing the raw data to analyze.</p>
+</dd>
+<dt>measure<span class="classifier">str, optional</span></dt><dd><p>The method used to compute task performance. Either ‘binary’ (default) or ‘cwm’.</p>
+</dd>
+</dl>
+</section>
+<section id="id14">
+<h3>Returns:<a class="headerlink" href="#id14" title="Link to this heading">¶</a></h3>
+<dl class="simple">
+<dt>pandas.DataFrame</dt><dd><p>A DataFrame containing the computed performance values and CLAM-NIBS target phase for each trial.</p>
+</dd>
+</dl>
+</section>
+<section id="id15">
+<h3>Raises:<a class="headerlink" href="#id15" title="Link to this heading">¶</a></h3>
+<dl class="simple">
+<dt>Exception</dt><dd><p>If the input raw data is not of type RawCLAM.
+If the modulation of task performance is attempted on data without CLAM-tACS stimulation.</p>
+</dd>
+</dl>
+</section>
+<section id="id16">
+<h3>Notes:<a class="headerlink" href="#id16" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p>This function only works if the data contains a target phase marker at the beginning of each trial.</p></li>
+</ul>
+</section>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="clamnibs.misc.compute_single_trial_rr">
+<span class="sig-prename descclassname"><span class="pre">clamnibs.misc.</span></span><span class="sig-name descname"><span class="pre">compute_single_trial_rr</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">raw</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#clamnibs.misc.compute_single_trial_rr" title="Link to this definition">¶</a></dt>
+<dd><p>Compute single-trial RR-intervals and assign them to CLAM-NIBS target phase.</p>
+<section id="id17">
+<h3>Parameters:<a class="headerlink" href="#id17" title="Link to this heading">¶</a></h3>
+<dl class="simple">
+<dt>raw<span class="classifier">RawCLAM</span></dt><dd><p>The RawCLAM object containing the raw data to analyze.</p>
+</dd>
+</dl>
+</section>
+<section id="id18">
+<h3>Returns:<a class="headerlink" href="#id18" title="Link to this heading">¶</a></h3>
+<dl class="simple">
+<dt>pandas.DataFrame</dt><dd><p>A DataFrame containing the computed RR intervals and CLAM-NIBS target phases.</p>
+</dd>
+</dl>
+</section>
+<section id="id19">
+<h3>Raises:<a class="headerlink" href="#id19" title="Link to this heading">¶</a></h3>
+<dl class="simple">
+<dt>Exception</dt><dd><p>If the input raw data is not of type RawCLAM.
+If the method is attempted on data without CLAM-tACS stimulation.</p>
+</dd>
+</dl>
+</section>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="clamnibs.misc.compute_single_trial_scr">
+<span class="sig-prename descclassname"><span class="pre">clamnibs.misc.</span></span><span class="sig-name descname"><span class="pre">compute_single_trial_scr</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">raw</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#clamnibs.misc.compute_single_trial_scr" title="Link to this definition">¶</a></dt>
+<dd><p>Compute single-trial area under the curve (AUC) of the skin conductance response (SCR) [1],
+and assign it to CLAM-NIBS target phase.</p>
+<section id="id20">
+<h3>Parameters:<a class="headerlink" href="#id20" title="Link to this heading">¶</a></h3>
+<dl class="simple">
+<dt>raw<span class="classifier">RawCLAM</span></dt><dd><p>The RawCLAM object containing the raw data to analyze.</p>
+</dd>
+</dl>
+</section>
+<section id="id21">
+<h3>Returns:<a class="headerlink" href="#id21" title="Link to this heading">¶</a></h3>
+<dl class="simple">
+<dt>pandas.DataFrame</dt><dd><p>A DataFrame containing the computed SCR AUC and CLAM-NIBS target phases.</p>
+</dd>
+</dl>
+</section>
+<section id="id22">
+<h3>Raises:<a class="headerlink" href="#id22" title="Link to this heading">¶</a></h3>
+<dl class="simple">
+<dt>Exception</dt><dd><p>If the input raw data is not of type RawCLAM.
+If the method is attempted on data without CLAM-tACS stimulation.</p>
+</dd>
+<dt>[1] Bach, Dominik R., Karl J. Friston, and Raymond J. Dolan. “Analytic measures for quantification of arousal</dt><dd><p>from spontaneous skin conductance fluctuations.” International journal of psychophysiology 76.1 (2010): 52-55.</p>
+</dd>
+</dl>
+</section>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="clamnibs.misc.df_to_array">
+<span class="sig-prename descclassname"><span class="pre">clamnibs.misc.</span></span><span class="sig-name descname"><span class="pre">df_to_array</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df_data</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#clamnibs.misc.df_to_array" title="Link to this definition">¶</a></dt>
+<dd><p>Convert a DataFrame containing one data point (trial or participant) per row to an ndarray.</p>
+<section id="id23">
+<h3>Parameters:<a class="headerlink" href="#id23" title="Link to this heading">¶</a></h3>
+<dl class="simple">
+<dt>df_data<span class="classifier">pandas.DataFrame</span></dt><dd><p>The DataFrame object containing the data to convert.</p>
+</dd>
+</dl>
+</section>
+<section id="id24">
+<h3>Returns:<a class="headerlink" href="#id24" title="Link to this heading">¶</a></h3>
+<dl class="simple">
+<dt>numpy.ndarray</dt><dd><p>An ndarray of shape (n_phases, n_datapoints, …).</p>
+</dd>
+</dl>
+</section>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="clamnibs.misc.save_calibration_data">
+<span class="sig-prename descclassname"><span class="pre">clamnibs.misc.</span></span><span class="sig-name descname"><span class="pre">save_calibration_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">obj</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">folder_path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">phase_delay</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#clamnibs.misc.save_calibration_data" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</section>
+<section id="module-clamnibs.sensor">
+<span id="clamnibs-sensor-module"></span><h2>clamnibs.sensor module<a class="headerlink" href="#module-clamnibs.sensor" title="Link to this heading">¶</a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="clamnibs.sensor.clean_sensor_data">
+<span class="sig-prename descclassname"><span class="pre">clamnibs.sensor.</span></span><span class="sig-name descname"><span class="pre">clean_sensor_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">obj_no_stim</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obj_stim</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#clamnibs.sensor.clean_sensor_data" title="Link to this definition">¶</a></dt>
+<dd><p>Use Stimulation Artifact Source Separation (SASS) [1] to remove electric stimulation artifacts
+from EEG sensor data recorded during CLAM-NIBS. Bad sensors are excluded from the procedure,
+and interpolated after application of SASS.</p>
+<section id="id25">
+<h3>Parameters:<a class="headerlink" href="#id25" title="Link to this heading">¶</a></h3>
+<dl class="simple">
+<dt>obj_no_stim<span class="classifier">RawCLAM or EpochsCLAM</span></dt><dd><p>The RawCLAM or EpochsCLAM object containing the sensor data without CLAM-NIBS stimulation.</p>
+</dd>
+<dt>obj_stim<span class="classifier">RawCLAM or EpochsCLAM</span></dt><dd><p>The RawCLAM or EpochsCLAM object containing the sensor data with CLAM-NIBS stimulation.</p>
+</dd>
+</dl>
+</section>
+<section id="id26">
+<h3>Raises:<a class="headerlink" href="#id26" title="Link to this heading">¶</a></h3>
+<dl class="simple">
+<dt>Exception</dt><dd><p>If the input data types are not RawCLAM or EpochsCLAM objects.
+If the data with and without CLAM-NIBS have different bandpass filter or target frequency range settings.</p>
+</dd>
+</dl>
+</section>
+<section id="id27">
+<h3>References:<a class="headerlink" href="#id27" title="Link to this heading">¶</a></h3>
+<p>[1] Haslacher, David, et al. “Stimulation artifact source separation (SASS) for assessing electric brain oscillations
+during transcranial alternating current stimulation (tACS).” Neuroimage 228 (2021): 117571.</p>
+</section>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="clamnibs.sensor.compute_single_trial_connectivity">
+<span class="sig-prename descclassname"><span class="pre">clamnibs.sensor.</span></span><span class="sig-name descname"><span class="pre">compute_single_trial_connectivity</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">raw</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">measure</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'phase_lag_index'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#clamnibs.sensor.compute_single_trial_connectivity" title="Link to this definition">¶</a></dt>
+<dd><p>Compute single-trial amplitude of target oscillation and assign it to CLAM-NIBS target phase.</p>
+<section id="id28">
+<h3>Parameters:<a class="headerlink" href="#id28" title="Link to this heading">¶</a></h3>
+<dl class="simple">
+<dt>raw<span class="classifier">RawCLAM</span></dt><dd><p>The RawCLAM object containing the raw data to analyze.</p>
+</dd>
+<dt>measure<span class="classifier">str, optional</span></dt><dd><p>The connectivity measure to compute. Currently, only ‘phase_lag_index’ is supported (default).</p>
+</dd>
+</dl>
+</section>
+<section id="id29">
+<h3>Returns:<a class="headerlink" href="#id29" title="Link to this heading">¶</a></h3>
+<dl class="simple">
+<dt>pandas.DataFrame</dt><dd><p>A DataFrame containing the computed amplitude values and CLAM-NIBS target phase for each epoch.</p>
+</dd>
+</dl>
+</section>
+<section id="id30">
+<h3>Raises:<a class="headerlink" href="#id30" title="Link to this heading">¶</a></h3>
+<dl class="simple">
+<dt>Exception</dt><dd><p>If the input raw data is not of type RawCLAM.
+If the method for computing amplitude is not supported.
+If the Raw object does not meet the requirements for the chosen method.</p>
+</dd>
+</dl>
+</section>
+</dd></dl>
+
+</section>
+<section id="module-clamnibs.source">
+<span id="clamnibs-source-module"></span><h2>clamnibs.source module<a class="headerlink" href="#module-clamnibs.source" title="Link to this heading">¶</a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="clamnibs.source.compute_phase_tracking">
+<span class="sig-prename descclassname"><span class="pre">clamnibs.source.</span></span><span class="sig-name descname"><span class="pre">compute_phase_tracking</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">raw</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plot</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#clamnibs.source.compute_phase_tracking" title="Link to this definition">¶</a></dt>
+<dd><p>Compute the phase lag between CLAM-NIBS and targeted brain oscillations.</p>
+<section id="id31">
+<h3>Parameters:<a class="headerlink" href="#id31" title="Link to this heading">¶</a></h3>
+<dl class="simple">
+<dt>raw<span class="classifier">RawCLAM</span></dt><dd><p>The RawCLAM object containing the raw data to analyze.</p>
+</dd>
+<dt>plot<span class="classifier">bool, optional</span></dt><dd><p>Whether to plot the phase tracking results (default is False).</p>
+</dd>
+</dl>
+</section>
+<section id="id32">
+<h3>Returns:<a class="headerlink" href="#id32" title="Link to this heading">¶</a></h3>
+<dl class="simple">
+<dt>float</dt><dd><p>The mean differene between the targeted phase lag and the actual phase lag,
+computed across all targeted phase lags.</p>
+</dd>
+</dl>
+</section>
+<section id="id33">
+<h3>Raises:<a class="headerlink" href="#id33" title="Link to this heading">¶</a></h3>
+<dl class="simple">
+<dt>Exception</dt><dd><p>If the input raw data is not of type RawCLAM.
+If the data is not filtered into the target frequency range.
+If the function is called on data without CLAM-NIBS.</p>
+</dd>
+</dl>
+</section>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="clamnibs.source.compute_single_trial_amplitude">
+<span class="sig-prename descclassname"><span class="pre">clamnibs.source.</span></span><span class="sig-name descname"><span class="pre">compute_single_trial_amplitude</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">raw</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">measure</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'hilbert_amp'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#clamnibs.source.compute_single_trial_amplitude" title="Link to this definition">¶</a></dt>
+<dd><p>Compute single-trial amplitude of target oscillation for each CLAM-NIBS target phase.</p>
+<section id="id34">
+<h3>Parameters:<a class="headerlink" href="#id34" title="Link to this heading">¶</a></h3>
+<dl class="simple">
+<dt>raw<span class="classifier">RawCLAM</span></dt><dd><p>The RawCLAM object containing the raw data to analyze.</p>
+</dd>
+<dt>measure<span class="classifier">str, optional</span></dt><dd><dl class="simple">
+<dt>The method used to compute amplitude modulation. It can be one of the following:</dt><dd><ul class="simple">
+<li><p>‘hilbert_amp’: Amplitude estimation based on Hilbert transform (default).</p></li>
+</ul>
+</dd>
+</dl>
+</dd>
+</dl>
+</section>
+<section id="id35">
+<h3>Returns:<a class="headerlink" href="#id35" title="Link to this heading">¶</a></h3>
+<dl class="simple">
+<dt>pandas.DataFrame</dt><dd><p>A DataFrame containing the computed amplitude values and CLAM-NIBS target phase for each epoch.</p>
+</dd>
+</dl>
+</section>
+<section id="id36">
+<h3>Raises:<a class="headerlink" href="#id36" title="Link to this heading">¶</a></h3>
+<dl class="simple">
+<dt>Exception</dt><dd><p>If the input raw data is not of type RawCLAM.
+If the method for computing amplitude is not supported.
+If the Raw object does not meet the requirements for the chosen method.</p>
+</dd>
+</dl>
+</section>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="clamnibs.source.compute_single_trial_psd">
+<span class="sig-prename descclassname"><span class="pre">clamnibs.source.</span></span><span class="sig-name descname"><span class="pre">compute_single_trial_psd</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">raw</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#clamnibs.source.compute_single_trial_psd" title="Link to this definition">¶</a></dt>
+<dd><p>Compute single-trial power spectral density of target oscillation for each CLAM-NIBS target phase.</p>
+<section id="id37">
+<h3>Parameters:<a class="headerlink" href="#id37" title="Link to this heading">¶</a></h3>
+<dl class="simple">
+<dt>raw<span class="classifier">RawCLAM</span></dt><dd><p>The RawCLAM object containing the raw data to analyze.</p>
+</dd>
+</dl>
+</section>
+<section id="id38">
+<h3>Returns:<a class="headerlink" href="#id38" title="Link to this heading">¶</a></h3>
+<dl class="simple">
+<dt>pandas.DataFrame</dt><dd><p>A DataFrame containing the computed power spectral density along with CLAM-NIBS target phase for each epoch.</p>
+</dd>
+</dl>
+</section>
+<section id="id39">
+<h3>Raises:<a class="headerlink" href="#id39" title="Link to this heading">¶</a></h3>
+<dl class="simple">
+<dt>Exception</dt><dd><p>If the input raw data is not of type RawCLAM.
+If the Raw object does not meet the requirements for the chosen method.</p>
+</dd>
+</dl>
+</section>
+</dd></dl>
+
+</section>
+<section id="module-clamnibs.stats">
+<span id="clamnibs-stats-module"></span><h2>clamnibs.stats module<a class="headerlink" href="#module-clamnibs.stats" title="Link to this heading">¶</a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="clamnibs.stats.get_network_modulation_amp_phase">
+<span class="sig-prename descclassname"><span class="pre">clamnibs.stats.</span></span><span class="sig-name descname"><span class="pre">get_network_modulation_amp_phase</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df_network_results</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">df_network_data</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#clamnibs.stats.get_network_modulation_amp_phase" title="Link to this definition">¶</a></dt>
+<dd><p>Get amplitude (depth) and optimal phase of modulation of connectivity
+in a network.</p>
+<section id="id40">
+<h3>Parameters:<a class="headerlink" href="#id40" title="Link to this heading">¶</a></h3>
+<dl class="simple">
+<dt>df_network_results: pandas.DataFrame</dt><dd><p>The dataframe containing the connections which were modulated at the
+participant- or group-level.</p>
+</dd>
+<dt>df_network_data: pandas.DataFrame</dt><dd><p>The dataframe containing the connectivity matrix for each trial
+and participant.</p>
+</dd>
+</dl>
+</section>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="clamnibs.stats.test_modulation">
+<span class="sig-prename descclassname"><span class="pre">clamnibs.stats.</span></span><span class="sig-name descname"><span class="pre">test_modulation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df_data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">test_level='participant'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">measure='amplitude'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">agg_func=&lt;function</span> <span class="pre">nanmean&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plot=False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plot_mode='box_strip'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#clamnibs.stats.test_modulation" title="Link to this definition">¶</a></dt>
+<dd><p>Test phase-dependent modulation of arbitrary outcome measure (e.g. amplitude).</p>
+<p>This function performs a permutation test to identify phase-dependent modulation
+of the outcome measure by CLAM-NIBS, and plots the results.</p>
+<section id="id41">
+<h3>Parameters:<a class="headerlink" href="#id41" title="Link to this heading">¶</a></h3>
+<dl class="simple">
+<dt>df_data<span class="classifier">pandas.DataFrame</span></dt><dd><p>The DataFrame containing outcome measure per participant, or per epoch
+for each participant.</p>
+</dd>
+<dt>test_level<span class="classifier">str, optional (default=’participant’)</span></dt><dd><p>The level at which the test should be performed (‘participant’ or ‘group’).</p>
+</dd>
+<dt>measure<span class="classifier">str, optional (default=’amplitude’)</span></dt><dd><p>The outcome measure employed.</p>
+</dd>
+<dt>agg_func<span class="classifier">callable, optimal (default=np.nanmean)</span></dt><dd><p>The function used to aggregate across trials within each phase bin (e.g. np.nanmean or np.nanstd).</p>
+</dd>
+<dt>plot<span class="classifier">str or bool, optional (default=False)</span></dt><dd><p>If string, the plot(s) will be saved at that path.
+If True, a figure will be created but not shown or saved.
+If False, no figure will be created.</p>
+</dd>
+<dt>plot_mode<span class="classifier">str, optional (default=’box_strip’)</span></dt><dd><p>The plotting mode. If all data points should be shown, use ‘box_strip’ for a boxplot and stripplot.
+If data points should only be visualized as aggregated measures (e.g. accuracy across all trials or
+variability across all ECG RR intervals), use ‘bar’ for a barplot.</p>
+</dd>
+</dl>
+</section>
+<section id="id42">
+<h3>Raises:<a class="headerlink" href="#id42" title="Link to this heading">¶</a></h3>
+<dl class="simple">
+<dt>Exception:</dt><dd><p>If the test level is not ‘participant’ or ‘group’</p>
+</dd>
+</dl>
+</section>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="clamnibs.stats.test_modulation_psd">
+<span class="sig-prename descclassname"><span class="pre">clamnibs.stats.</span></span><span class="sig-name descname"><span class="pre">test_modulation_psd</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df_data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">test_level</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'participant'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">measure</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'power'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">freq_lim_tol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plot</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plot_mode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'box_strip'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#clamnibs.stats.test_modulation_psd" title="Link to this definition">¶</a></dt>
+<dd><p>Test phase-dependent modulation of amplitude, frequency, or aperiodic exponent from power spectral density.</p>
+<p>This function performs a permutation test to identify phase-dependent modulation
+of the outcome measure by CLAM-NIBS, and plots the results.</p>
+<section id="id43">
+<h3>Parameters:<a class="headerlink" href="#id43" title="Link to this heading">¶</a></h3>
+<dl class="simple">
+<dt>df_data<span class="classifier">pandas.DataFrame</span></dt><dd><p>The DataFrame containing outcome measure per participant, or per epoch
+for each participant.</p>
+</dd>
+<dt>test_level<span class="classifier">str, optional (default=’participant’)</span></dt><dd><p>The level at which the test should be performed (‘participant’ or ‘group’).</p>
+</dd>
+<dt>measure<span class="classifier">str, optional (default=’power’)</span></dt><dd><p>The outcome measure employed (‘power’, ‘frequency’, or ‘aperiodic’).</p>
+</dd>
+<dt>freq_lim_tol<span class="classifier">float, optional (default=0)</span></dt><dd><p>The tolerance by which assessed peaks in the power spectrum can deviate in
+frequency from the target frequency range set in the data.</p>
+</dd>
+<dt>plot<span class="classifier">str or bool, optional (default=False)</span></dt><dd><p>If string, the plot(s) will be saved at that path.
+If True, a figure will be created but not shown or saved.
+If False, no figure will be created.</p>
+</dd>
+<dt>plot_mode<span class="classifier">str, optional (default=’box_strip’)</span></dt><dd><p>The plotting mode. If all data points should be shown, use ‘box_strip’ for a boxplot and stripplot.
+If data points should only be visualized as aggregated measures (e.g. accuracy across all trials or
+variability across all ECG RR intervals), use ‘bar’ for a barplot.</p>
+</dd>
+</dl>
+</section>
+<section id="id44">
+<h3>Raises:<a class="headerlink" href="#id44" title="Link to this heading">¶</a></h3>
+<dl class="simple">
+<dt>Exception:</dt><dd><p>If the test level is not ‘participant’ or ‘group’</p>
+</dd>
+</dl>
+</section>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="clamnibs.stats.test_sensor_cluster_modulation">
+<span class="sig-prename descclassname"><span class="pre">clamnibs.stats.</span></span><span class="sig-name descname"><span class="pre">test_sensor_cluster_modulation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df_data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">info</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">test_level</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'participant'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">measure</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'amplitude'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">threshold_percentile</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">95</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plot</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#clamnibs.stats.test_sensor_cluster_modulation" title="Link to this definition">¶</a></dt>
+<dd><p>Test phase-dependent modulation of arbitrary outcome measure (e.g. power) at the sensor level.</p>
+<p>This function performs a cluster-based permutation test to identify clusters of sensors whose
+value of the outcome measure is modulated by CLAM-NIBS, and plots the results.</p>
+<section id="id45">
+<h3>Parameters:<a class="headerlink" href="#id45" title="Link to this heading">¶</a></h3>
+<dl class="simple">
+<dt>df_data<span class="classifier">pandas.DataFrame</span></dt><dd><p>The DataFrame containing outcome measure (for all sensors) per participant, or per epoch
+for each participant.</p>
+</dd>
+<dt>info<span class="classifier">mne.Info</span></dt><dd><p>The Info object for topographic plotting.</p>
+</dd>
+<dt>test_level<span class="classifier">str, optional (default=’participant’)</span></dt><dd><p>The level at which the test should be performed (‘participant’ or ‘group’).</p>
+</dd>
+<dt>measure<span class="classifier">str, optional (default=’amplitude’)</span></dt><dd><p>The outcome measure employed.</p>
+</dd>
+<dt>plot<span class="classifier">str or bool, optional (default=False)</span></dt><dd><p>If string, the plot(s) will be saved at that path.
+If True, a figure will be created but not shown or saved.
+If False, no figure will be created.</p>
+</dd>
+</dl>
+</section>
+<section id="id46">
+<h3>Raises:<a class="headerlink" href="#id46" title="Link to this heading">¶</a></h3>
+<dl class="simple">
+<dt>Exception:</dt><dd><p>If the test level is not ‘participant’ or ‘group’</p>
+</dd>
+</dl>
+</section>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="clamnibs.stats.test_sensor_network_modulation">
+<span class="sig-prename descclassname"><span class="pre">clamnibs.stats.</span></span><span class="sig-name descname"><span class="pre">test_sensor_network_modulation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df_data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">info</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">test_level</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'participant'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">measure</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'phase_lag_index'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">threshold_percentile</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">95</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#clamnibs.stats.test_sensor_network_modulation" title="Link to this definition">¶</a></dt>
+<dd><p>Test phase-dependent modulation of functional connectivity at the sensor level.</p>
+<p>This function performs a network-based permutation test to identify networks whose
+connectivity is modulated by CLAM-NIBS, and plots the results.</p>
+<section id="id47">
+<h3>Parameters:<a class="headerlink" href="#id47" title="Link to this heading">¶</a></h3>
+<dl class="simple">
+<dt>df_data<span class="classifier">pandas.DataFrame</span></dt><dd><p>The DataFrame containing connectivity matrices per participant, or per epoch
+for each participant.</p>
+</dd>
+<dt>info<span class="classifier">mne.Info</span></dt><dd><p>The Info object for topographic plotting.</p>
+</dd>
+<dt>test_level<span class="classifier">str, optional (default=’participant’)</span></dt><dd><p>The level at which the test should be performed (‘participant’ or ‘group’).</p>
+</dd>
+<dt>measure<span class="classifier">str, optional (default=’phase_lag_index’)</span></dt><dd><p>The connectivity measure employed.</p>
+</dd>
+<dt>plot<span class="classifier">str or bool, optional (default=False)</span></dt><dd><p>If string, the plot(s) will be saved at that path.
+If True, a figure will be created but not shown or saved.
+If False, no figure will be created.</p>
+</dd>
+</dl>
+</section>
+<section id="id48">
+<h3>Raises:<a class="headerlink" href="#id48" title="Link to this heading">¶</a></h3>
+<dl class="simple">
+<dt>Exception:</dt><dd><p>If the test level is not ‘participant’ or ‘group’</p>
+</dd>
+</dl>
+</section>
+</dd></dl>
+
+</section>
+<section id="module-clamnibs.viz">
+<span id="clamnibs-viz-module"></span><h2>clamnibs.viz module<a class="headerlink" href="#module-clamnibs.viz" title="Link to this heading">¶</a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="clamnibs.viz.plot_modulation_amp_corr">
+<span class="sig-prename descclassname"><span class="pre">clamnibs.viz.</span></span><span class="sig-name descname"><span class="pre">plot_modulation_amp_corr</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df_amp_phase_results</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#clamnibs.viz.plot_modulation_amp_corr" title="Link to this definition">¶</a></dt>
+<dd><p>Plot correlation of amplitude (depth) of modulation of two
+outcome measures cross participants.</p>
+<section id="id49">
+<h3>Parameters:<a class="headerlink" href="#id49" title="Link to this heading">¶</a></h3>
+<dl class="simple">
+<dt>df_amp_phase_results: pandas.DataFrame</dt><dd><p>The dataframe containing the amplitude (depth) of modulation
+for each participant and outcome measure.</p>
+</dd>
+</dl>
+</section>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="clamnibs.viz.plot_network_modulation_topo">
+<span class="sig-prename descclassname"><span class="pre">clamnibs.viz.</span></span><span class="sig-name descname"><span class="pre">plot_network_modulation_topo</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df_network_results</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_conns</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">participant</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">info</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#clamnibs.viz.plot_network_modulation_topo" title="Link to this definition">¶</a></dt>
+<dd><p>Plot modulated network as connections between sensors on a topoplot.</p>
+<section id="id50">
+<h3>Parameters:<a class="headerlink" href="#id50" title="Link to this heading">¶</a></h3>
+<dl class="simple">
+<dt>df_network_results: pandas.DataFrame</dt><dd><p>The dataframe containing the connections which were modulated at the
+participant- or group-level.</p>
+</dd>
+<dt>n_conns<span class="classifier">int</span></dt><dd><p>The number of connections to plot. The n_conns most strongly modulated
+connections will be plotted.</p>
+</dd>
+<dt>participant<span class="classifier">str</span></dt><dd><p>The participant in which the modulated network was identified. Can be ‘group’
+for a group-level plot.</p>
+</dd>
+<dt>info<span class="classifier">mne.Info</span></dt><dd><p>The Info object for topographic plotting.</p>
+</dd>
+</dl>
+</section>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="clamnibs.viz.plot_network_modulation_values">
+<span class="sig-prename descclassname"><span class="pre">clamnibs.viz.</span></span><span class="sig-name descname"><span class="pre">plot_network_modulation_values</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df_network_results</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">df_network_data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">participant_identified_in</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">participant_applied_to</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#clamnibs.viz.plot_network_modulation_values" title="Link to this definition">¶</a></dt>
+<dd><p>Plot connectivity values averaged within each modulated network as a
+box-/stripplot featuring each target phase.</p>
+<section id="id51">
+<h3>Parameters:<a class="headerlink" href="#id51" title="Link to this heading">¶</a></h3>
+<dl class="simple">
+<dt>df_network_results: pandas.DataFrame</dt><dd><p>The dataframe containing the connections which were modulated at the
+participant- or group-level.</p>
+</dd>
+<dt>df_network_data: pandas.DataFrame</dt><dd><p>The dataframe containing the connectivity matrix for each trial
+and participant.</p>
+</dd>
+<dt>participant_identified_in<span class="classifier">str</span></dt><dd><p>The participant in which the network was identified. This network mask
+will be applied to the data and plotted. Can be ‘group’ for group-level
+network.</p>
+</dd>
+<dt>participant_applied_to<span class="classifier">str</span></dt><dd><p>The participant to whose data the network mask should be applied for
+plotting. Can be ‘group’ for group-level data.</p>
+</dd>
+</dl>
+</section>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="clamnibs.viz.set_bads">
+<span class="sig-prename descclassname"><span class="pre">clamnibs.viz.</span></span><span class="sig-name descname"><span class="pre">set_bads</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">obj</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">default_bads</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#clamnibs.viz.set_bads" title="Link to this definition">¶</a></dt>
+<dd><p>Interactive tool to mark bad channels in EEG data.</p>
+<p>This function provides an interactive visualization to mark bad channels in EEG data.
+It displays a scalp plot with the channels labeled, allowing the user to click on
+channels to mark them as bad.</p>
+<section id="id52">
+<h3>Parameters:<a class="headerlink" href="#id52" title="Link to this heading">¶</a></h3>
+<dl class="simple">
+<dt>obj<span class="classifier">RawCLAM or EpochsCLAM object</span></dt><dd><p>The RawCLAM or EpochsCLAM object containing EEG data.</p>
+</dd>
+<dt>default_bads: list of str</dt><dd><p>The channels that are marked bad by default</p>
+</dd>
+</dl>
+</section>
+<section id="id53">
+<h3>Raises:<a class="headerlink" href="#id53" title="Link to this heading">¶</a></h3>
+<dl class="simple">
+<dt>Exception:</dt><dd><p>If the input object is not an instance of RawCLAM or EpochsCLAM.</p>
+</dd>
+</dl>
+</section>
+<section id="id54">
+<h3>Notes:<a class="headerlink" href="#id54" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p>This function requires Matplotlib to display the interactive visualization.</p></li>
+<li><p>Bad channels are marked by clicking on the corresponding channel in the plot.</p></li>
+<li><p>The plot window must be closed to finalize the selection of bad channels.</p></li>
+<li><p>The updated list of bad channels is stored in the <cite>bads</cite> attribute of the input object.</p></li>
+</ul>
+</section>
+</dd></dl>
+
+</section>
+<section id="module-clamnibs">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-clamnibs" title="Link to this heading">¶</a></h2>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">CLAM-NIBS</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2025, David Haslacher.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/source/clamnibs.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
