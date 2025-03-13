@@ -66,7 +66,7 @@ plt.show()
 
 For more detailed examples and documentation, please refer to the following resources:
 
-- [Jupyter Notebooks with Examples](examples/)
+- [Jupyter notebooks with examples](examples/)
 - [Documentation](INSERT_READTHEDOCS)
 
 ## Which stimulation techniques does CLAM-NIBS encompass?
@@ -85,6 +85,7 @@ In order to adapt electric or magnetic stimulation to targeted brain oscillation
 [1] Haslacher, David, et al. "Working memory enhancement using real-time phase-tuned transcranial alternating current stimulation." Brain Stimulation (2024).<br>
 [2] Violante, Ines R., et al. "Non-invasive temporal interference electrical stimulation of the human hippocampus." Nature neuroscience (2023).<br>
 [3] https://patents.google.com/patent/US20240017083A1/en
+[4] Nikulin, Vadim V., et al. "A novel method for reliable and fast extraction of neuronal EEG/MEG oscillations on the basis of spatio-spectral decomposition." NeuroImage (2011).
 
 ## License
 This project is licensed under the MIT License - see the LICENSE file for details.
