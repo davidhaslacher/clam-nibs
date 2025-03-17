@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>clamnibs.viz &#8212; CLAM-NIBS  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="../../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css?v=27fed22d" />
+    <script src="../../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for clamnibs.viz</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">mne.utils.check</span><span class="w"> </span><span class="kn">import</span> <span class="n">_check_sphere</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">mne.viz.topomap</span><span class="w"> </span><span class="kn">import</span> <span class="n">_get_pos_outlines</span><span class="p">,</span> <span class="n">_draw_outlines</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">matplotlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">rcParams</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">functools</span><span class="w"> </span><span class="kn">import</span> <span class="n">partial</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.base</span><span class="w"> </span><span class="kn">import</span> <span class="n">RawCLAM</span><span class="p">,</span> <span class="n">EpochsCLAM</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.misc</span><span class="w"> </span><span class="kn">import</span> <span class="n">df_to_array</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">seaborn</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">sns</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">mne.viz</span><span class="w"> </span><span class="kn">import</span> <span class="n">plot_sensors</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.stats</span><span class="w"> </span><span class="kn">import</span> <span class="n">_dft</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_onpick_sensor</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span><span class="p">,</span> <span class="n">pos</span><span class="p">,</span> <span class="n">ch_names</span><span class="p">,</span> <span class="n">bads</span><span class="p">,</span> <span class="n">scatter</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">event</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">event</span><span class="o">.</span><span class="n">mouseevent</span><span class="o">.</span><span class="n">inaxes</span> <span class="o">!=</span> <span class="n">ax</span><span class="p">:</span>
+            <span class="k">return</span>
+        <span class="n">ind</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">ind</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">ch_name</span> <span class="o">=</span> <span class="n">ch_names</span><span class="p">[</span><span class="n">ind</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">ch_name</span> <span class="ow">in</span> <span class="n">bads</span><span class="p">:</span>
+            <span class="n">bads</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">ch_name</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">bads</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ch_name</span><span class="p">)</span>
+            
+    <span class="n">edgecolors</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;r&#39;</span> <span class="k">if</span> <span class="n">ch</span> <span class="ow">in</span> <span class="n">bads</span> <span class="k">else</span> <span class="s1">&#39;k&#39;</span> <span class="k">for</span> <span class="n">ch</span> <span class="ow">in</span> <span class="n">ch_names</span><span class="p">]</span>
+    <span class="n">scatter</span><span class="o">.</span><span class="n">set_edgecolors</span><span class="p">(</span><span class="n">edgecolors</span><span class="p">)</span>
+    <span class="n">fig</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+
+
+<div class="viewcode-block" id="set_bads">
+<a class="viewcode-back" href="../../source/clamnibs.html#clamnibs.viz.set_bads">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">set_bads</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">default_bads</span><span class="p">):</span>
+<span class="w">    </span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Interactive tool to mark bad channels in EEG data.</span>
+
+<span class="sd">    This function provides an interactive visualization to mark bad channels in EEG data.</span>
+<span class="sd">    It displays a scalp plot with the channels labeled, allowing the user to click on</span>
+<span class="sd">    channels to mark them as bad.</span>
+
+<span class="sd">    Parameters:</span>
+<span class="sd">    -----------</span>
+<span class="sd">    obj : RawCLAM or EpochsCLAM object</span>
+<span class="sd">        The RawCLAM or EpochsCLAM object containing EEG data.</span>
+<span class="sd">    default_bads: list of str</span>
+<span class="sd">        The channels that are marked bad by default</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">    -------</span>
+<span class="sd">    Exception:</span>
+<span class="sd">        If the input object is not an instance of RawCLAM or EpochsCLAM.</span>
+
+<span class="sd">    Notes:</span>
+<span class="sd">    ------</span>
+<span class="sd">    - This function requires Matplotlib to display the interactive visualization.</span>
+<span class="sd">    - Bad channels are marked by clicking on the corresponding channel in the plot.</span>
+<span class="sd">    - The plot window must be closed to finalize the selection of bad channels.</span>
+<span class="sd">    - The updated list of bad channels is stored in the `bads` attribute of the input object.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">RawCLAM</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">EpochsCLAM</span><span class="p">)):</span>
+        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s1">&#39;set_bads can only be applied to RawCLAM or EpochsCLAM objects&#39;</span><span class="p">)</span>
+
+    <span class="n">info</span> <span class="o">=</span> <span class="n">obj</span><span class="o">.</span><span class="n">info</span>
+    <span class="n">ch_names</span> <span class="o">=</span> <span class="n">obj</span><span class="o">.</span><span class="n">ch_names</span>
+
+    <span class="n">pos</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">info</span><span class="p">[</span><span class="s2">&quot;chs&quot;</span><span class="p">]),</span> <span class="mi">3</span><span class="p">))</span>
+    <span class="k">for</span> <span class="n">ci</span><span class="p">,</span> <span class="n">ch</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">info</span><span class="p">[</span><span class="s1">&#39;chs&#39;</span><span class="p">]):</span>
+        <span class="n">pos</span><span class="p">[</span><span class="n">ci</span><span class="p">]</span> <span class="o">=</span> <span class="n">ch</span><span class="p">[</span><span class="s2">&quot;loc&quot;</span><span class="p">][:</span><span class="mi">3</span><span class="p">]</span>
+
+    <span class="n">sphere</span> <span class="o">=</span> <span class="n">_check_sphere</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">info</span><span class="p">)</span>
+
+    <span class="n">subplot_kw</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+    <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span>
+        <span class="nb">max</span><span class="p">(</span><span class="n">rcParams</span><span class="p">[</span><span class="s2">&quot;figure.figsize&quot;</span><span class="p">]),)</span> <span class="o">*</span> <span class="mi">2</span><span class="p">,</span> <span class="n">subplot_kw</span><span class="o">=</span><span class="n">subplot_kw</span><span class="p">)</span>
+
+    <span class="n">ax</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">zorder</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="n">pos</span><span class="p">,</span> <span class="n">outlines</span> <span class="o">=</span> <span class="n">_get_pos_outlines</span><span class="p">(</span>
+        <span class="n">info</span><span class="p">,</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">ch_names</span><span class="p">)),</span> <span class="n">sphere</span><span class="p">,</span> <span class="n">to_sphere</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">_draw_outlines</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">outlines</span><span class="p">)</span>
+    <span class="c1"># DRAW SERIES OF LINES HERE FOR CONNECTIVITY GRAPH</span>
+    <span class="n">scatter</span> <span class="o">=</span> <span class="n">ax</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span>
+        <span class="n">pos</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span>
+        <span class="n">pos</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">],</span>
+        <span class="n">picker</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">clip_on</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">c</span><span class="o">=</span><span class="s1">&#39;k&#39;</span><span class="p">,</span>
+        <span class="n">edgecolors</span><span class="o">=</span><span class="s1">&#39;k&#39;</span><span class="p">,</span>
+        <span class="n">s</span><span class="o">=</span><span class="mi">150</span><span class="p">,</span>
+        <span class="n">lw</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="n">ax</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">aspect</span><span class="o">=</span><span class="s2">&quot;equal&quot;</span><span class="p">)</span>
+    <span class="n">fig</span><span class="o">.</span><span class="n">subplots_adjust</span><span class="p">(</span><span class="n">left</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">bottom</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">right</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">top</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">axis</span><span class="p">(</span><span class="s2">&quot;off&quot;</span><span class="p">)</span>
+
+    <span class="n">indices</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">pos</span><span class="p">))</span>
+    <span class="k">for</span> <span class="n">idx</span> <span class="ow">in</span> <span class="n">indices</span><span class="p">:</span>
+        <span class="n">this_pos</span> <span class="o">=</span> <span class="n">pos</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">text</span><span class="p">(</span>
+            <span class="n">this_pos</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+            <span class="n">this_pos</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="mf">0.007</span><span class="p">,</span>
+            <span class="n">ch_names</span><span class="p">[</span><span class="n">idx</span><span class="p">],</span>
+            <span class="n">ha</span><span class="o">=</span><span class="s2">&quot;center&quot;</span><span class="p">,</span>
+            <span class="n">va</span><span class="o">=</span><span class="s2">&quot;center&quot;</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="n">xmin</span><span class="p">,</span> <span class="n">ymin</span><span class="p">,</span> <span class="n">xmax</span><span class="p">,</span> <span class="n">ymax</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">get_window_extent</span><span class="p">()</span><span class="o">.</span><span class="n">bounds</span>
+    <span class="n">renderer</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">get_renderer</span><span class="p">()</span>
+    <span class="n">extents</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="o">.</span><span class="n">get_window_extent</span><span class="p">(</span><span class="n">renderer</span><span class="o">=</span><span class="n">renderer</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">ax</span><span class="o">.</span><span class="n">texts</span><span class="p">]</span>
+    <span class="n">xmaxs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">x</span><span class="o">.</span><span class="n">max</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">extents</span><span class="p">])</span>
+    <span class="n">bad_xmax_ixs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nonzero</span><span class="p">(</span><span class="n">xmaxs</span> <span class="o">&gt;</span> <span class="n">xmax</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">bad_xmax_ixs</span><span class="p">):</span>
+        <span class="n">needed_space</span> <span class="o">=</span> <span class="p">(</span><span class="n">xmaxs</span><span class="p">[</span><span class="n">bad_xmax_ixs</span><span class="p">]</span> <span class="o">-</span> <span class="n">xmax</span><span class="p">)</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">/</span> <span class="n">xmax</span>
+        <span class="n">fig</span><span class="o">.</span><span class="n">subplots_adjust</span><span class="p">(</span><span class="n">right</span><span class="o">=</span><span class="mi">1</span> <span class="o">-</span> <span class="mf">1.1</span> <span class="o">*</span> <span class="n">needed_space</span><span class="p">)</span>
+
+    <span class="n">bads</span> <span class="o">=</span> <span class="p">[</span><span class="n">ch</span> <span class="k">for</span> <span class="n">ch</span> <span class="ow">in</span> <span class="n">default_bads</span> <span class="k">if</span> <span class="n">ch</span> <span class="ow">in</span> <span class="n">ch_names</span><span class="p">]</span>
+    
+    <span class="n">picker</span> <span class="o">=</span> <span class="n">partial</span><span class="p">(</span>
+        <span class="n">_onpick_sensor</span><span class="p">,</span>
+        <span class="n">fig</span><span class="o">=</span><span class="n">fig</span><span class="p">,</span>
+        <span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">,</span>
+        <span class="n">pos</span><span class="o">=</span><span class="n">pos</span><span class="p">,</span>
+        <span class="n">ch_names</span><span class="o">=</span><span class="n">ch_names</span><span class="p">,</span>
+        <span class="n">bads</span><span class="o">=</span><span class="n">bads</span><span class="p">,</span>
+        <span class="n">scatter</span><span class="o">=</span><span class="n">scatter</span>
+    <span class="p">)</span>
+    <span class="n">fig</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">mpl_connect</span><span class="p">(</span><span class="s2">&quot;pick_event&quot;</span><span class="p">,</span> <span class="n">picker</span><span class="p">)</span>
+    <span class="n">picker</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span> <span class="c1"># call to the update function with a dummy event to force it to draw the initial bad channels</span>
+    <span class="n">fig</span><span class="o">.</span><span class="n">set_size_inches</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">12</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">text</span><span class="p">(</span>
+        <span class="mf">0.05</span><span class="p">,</span>
+        <span class="mf">0.95</span><span class="p">,</span>
+        <span class="s1">&#39;Please mark all bad channels by clicking on them.</span><span class="se">\n</span><span class="s1">Close the window when done&#39;</span><span class="p">,</span>
+        <span class="n">transform</span><span class="o">=</span><span class="n">ax</span><span class="o">.</span><span class="n">transAxes</span><span class="p">,</span>
+        <span class="n">verticalalignment</span><span class="o">=</span><span class="s1">&#39;top&#39;</span><span class="p">,</span>
+        <span class="n">horizontalalignment</span><span class="o">=</span><span class="s1">&#39;center&#39;</span><span class="p">,</span>
+        <span class="n">fontsize</span><span class="o">=</span><span class="mi">14</span><span class="p">,</span>
+        <span class="n">weight</span><span class="o">=</span><span class="s1">&#39;bold&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+    <span class="n">obj</span><span class="o">.</span><span class="n">info</span><span class="p">[</span><span class="s1">&#39;bads&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">bads</span></div>
+
+    
+<div class="viewcode-block" id="plot_network_modulation_values">
+<a class="viewcode-back" href="../../source/clamnibs.html#clamnibs.viz.plot_network_modulation_values">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">plot_network_modulation_values</span><span class="p">(</span><span class="n">df_network_results</span><span class="p">,</span> <span class="n">df_network_data</span><span class="p">,</span> <span class="n">participant_identified_in</span><span class="p">,</span> <span class="n">participant_applied_to</span><span class="p">):</span>
+<span class="w">    </span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Plot connectivity values averaged within each modulated network as a </span>
+<span class="sd">    box-/stripplot featuring each target phase.</span>
+
+<span class="sd">    Parameters:</span>
+<span class="sd">    -----------</span>
+<span class="sd">    df_network_results: pandas.DataFrame</span>
+<span class="sd">        The dataframe containing the connections which were modulated at the </span>
+<span class="sd">        participant- or group-level.</span>
+<span class="sd">        </span>
+<span class="sd">    df_network_data: pandas.DataFrame</span>
+<span class="sd">        The dataframe containing the connectivity matrix for each trial </span>
+<span class="sd">        and participant.</span>
+<span class="sd">        </span>
+<span class="sd">    participant_identified_in : str</span>
+<span class="sd">        The participant in which the network was identified. This network mask</span>
+<span class="sd">        will be applied to the data and plotted. Can be &#39;group&#39; for group-level </span>
+<span class="sd">        network.</span>
+<span class="sd">        </span>
+<span class="sd">    participant_applied_to : str</span>
+<span class="sd">        The participant to whose data the network mask should be applied for</span>
+<span class="sd">        plotting. Can be &#39;group&#39; for group-level data.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="n">df_network_results</span> <span class="o">=</span> <span class="n">df_network_results</span><span class="p">[</span><span class="n">df_network_results</span><span class="p">[</span><span class="s1">&#39;participant&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="n">participant_identified_in</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">participant_applied_to</span> <span class="o">==</span> <span class="s1">&#39;group&#39;</span><span class="p">:</span>
+        <span class="n">df_network_data</span> <span class="o">=</span> <span class="n">df_network_data</span><span class="o">.</span><span class="n">groupby</span><span class="p">([</span><span class="n">col</span> <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">df_network_data</span><span class="o">.</span><span class="n">columns</span> <span class="k">if</span> <span class="n">col</span> <span class="o">!=</span> <span class="s1">&#39;value&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">agg</span><span class="p">({</span><span class="s1">&#39;value&#39;</span> <span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">})</span><span class="o">.</span><span class="n">reset_index</span><span class="p">()</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">df_network_data</span> <span class="o">=</span> <span class="n">df_network_data</span><span class="p">[</span><span class="n">df_network_data</span><span class="p">[</span><span class="s1">&#39;participant&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="n">participant_applied_to</span><span class="p">]</span>
+    
+    <span class="n">network_data</span><span class="p">,</span> <span class="n">target_phases</span> <span class="o">=</span> <span class="n">df_to_array</span><span class="p">(</span><span class="n">df_network_data</span><span class="p">)</span>
+    <span class="c1"># this is now (n_phases, n_epochs, n_chs, n_chs)</span>
+    
+    <span class="n">measure</span> <span class="o">=</span> <span class="n">df_network_data</span><span class="p">[</span><span class="s1">&#39;measure&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    
+    <span class="k">for</span> <span class="n">ix_cluster</span><span class="p">,</span> <span class="n">cluster</span> <span class="ow">in</span> <span class="n">df_network_results</span><span class="o">.</span><span class="n">iterrows</span><span class="p">():</span>
+        
+        <span class="n">t_value</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">cluster</span><span class="p">[</span><span class="s1">&#39;t_values&#39;</span><span class="p">])</span>  <span class="c1"># average over t-values per connection in cluster</span>
+        <span class="n">p_value</span> <span class="o">=</span> <span class="n">cluster</span><span class="p">[</span><span class="s1">&#39;p_value&#39;</span><span class="p">]</span>            <span class="c1"># this is one p-value for the cluster</span>
+        <span class="n">ixs_row</span><span class="p">,</span> <span class="n">ixs_col</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">cluster</span><span class="p">[</span><span class="s1">&#39;connections&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">T</span>    <span class="c1"># this contains the indices marking connections between sensors in cluster</span>
+        <span class="n">cluster_data</span> <span class="o">=</span> <span class="n">network_data</span><span class="p">[:,</span> <span class="p">:,</span> <span class="n">ixs_row</span><span class="p">,</span> <span class="n">ixs_col</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([[</span><span class="n">target_phases</span><span class="p">[</span><span class="n">ix</span><span class="p">]]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">cluster_data</span><span class="p">[</span><span class="n">ix</span><span class="p">])</span>
+                            <span class="k">for</span> <span class="n">ix</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">target_phases</span><span class="p">))])</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="p">[</span><span class="nb">round</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">rad2deg</span><span class="p">(</span><span class="n">ph</span><span class="p">))</span> <span class="k">for</span> <span class="n">ph</span> <span class="ow">in</span> <span class="n">x</span><span class="p">]</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span><span class="n">cluster_data</span><span class="p">)</span>
+        <span class="n">df_plot</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
+                <span class="p">{</span><span class="s1">&#39;Target Phase (°)&#39;</span><span class="p">:</span> <span class="n">x</span><span class="p">,</span> <span class="s1">&#39;</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">measure</span><span class="p">):</span> <span class="n">y</span><span class="p">})</span>
+        <span class="n">df_plot_agg</span> <span class="o">=</span> <span class="n">df_plot</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="s1">&#39;Target Phase (°)&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s1">&#39;Target Phase (°)&#39;</span><span class="p">)</span> \
+                <span class="o">.</span><span class="n">agg</span><span class="p">({</span><span class="s1">&#39;</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">measure</span><span class="p">)</span> <span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">})</span><span class="o">.</span><span class="n">reset_index</span><span class="p">()</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">()</span>
+        <span class="n">sns</span><span class="o">.</span><span class="n">boxplot</span><span class="p">(</span>
+            <span class="n">df_plot</span><span class="p">,</span>
+            <span class="n">x</span><span class="o">=</span><span class="s1">&#39;Target Phase (°)&#39;</span><span class="p">,</span>
+            <span class="n">y</span><span class="o">=</span><span class="s1">&#39;</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">measure</span><span class="p">),</span>
+            <span class="n">color</span><span class="o">=</span><span class="s1">&#39;k&#39;</span><span class="p">,</span>
+            <span class="n">boxprops</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span>
+                <span class="n">alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">),</span>
+            <span class="n">showmeans</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">zorder</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+            <span class="n">showfliers</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="n">sns</span><span class="o">.</span><span class="n">stripplot</span><span class="p">(</span>
+            <span class="n">df_plot</span><span class="p">,</span>
+            <span class="n">x</span><span class="o">=</span><span class="s1">&#39;Target Phase (°)&#39;</span><span class="p">,</span>
+            <span class="n">y</span><span class="o">=</span><span class="s1">&#39;</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">measure</span><span class="p">),</span>
+            <span class="n">color</span><span class="o">=</span><span class="s1">&#39;r&#39;</span><span class="p">,</span>
+            <span class="n">alpha</span><span class="o">=</span><span class="mf">0.8</span><span class="p">,</span>
+            <span class="n">zorder</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">target_phases</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="n">avgs</span> <span class="o">=</span> <span class="n">df_plot_agg</span><span class="p">[</span><span class="s1">&#39;</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">measure</span><span class="p">)]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
+            <span class="n">_dft</span><span class="p">(</span><span class="n">avgs</span><span class="p">,</span> <span class="n">plot_sine</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">&#39;Identified in </span><span class="si">{}</span><span class="s1">, applied to </span><span class="si">{}</span><span class="s1">, Cluster </span><span class="si">{:d}</span><span class="s1">, p = </span><span class="si">{:.3e}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">participant_identified_in</span><span class="p">,</span> 
+                                                                                <span class="n">participant_applied_to</span><span class="p">,</span> 
+                                                                                <span class="nb">int</span><span class="p">(</span><span class="n">ix_cluster</span><span class="p">),</span> 
+                                                                                <span class="n">p_value</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="plot_network_modulation_topo">
+<a class="viewcode-back" href="../../source/clamnibs.html#clamnibs.viz.plot_network_modulation_topo">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">plot_network_modulation_topo</span><span class="p">(</span><span class="n">df_network_results</span><span class="p">,</span> <span class="n">n_conns</span><span class="p">,</span> <span class="n">participant</span><span class="p">,</span> <span class="n">info</span><span class="p">):</span>
+<span class="w">    </span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Plot modulated network as connections between sensors on a topoplot.</span>
+
+<span class="sd">    Parameters:</span>
+<span class="sd">    -----------</span>
+<span class="sd">    df_network_results: pandas.DataFrame</span>
+<span class="sd">        The dataframe containing the connections which were modulated at the </span>
+<span class="sd">        participant- or group-level.</span>
+<span class="sd">    </span>
+<span class="sd">    n_conns : int</span>
+<span class="sd">        The number of connections to plot. The n_conns most strongly modulated</span>
+<span class="sd">        connections will be plotted.</span>
+<span class="sd">        </span>
+<span class="sd">    participant : str</span>
+<span class="sd">        The participant in which the modulated network was identified. Can be &#39;group&#39;</span>
+<span class="sd">        for a group-level plot.</span>
+<span class="sd">        </span>
+<span class="sd">    info : mne.Info</span>
+<span class="sd">        The Info object for topographic plotting.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="n">df_network_results</span> <span class="o">=</span> <span class="n">df_network_results</span><span class="p">[</span><span class="n">df_network_results</span><span class="p">[</span><span class="s1">&#39;participant&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="n">participant</span><span class="p">]</span>
+        
+    <span class="n">colors</span> <span class="o">=</span> <span class="n">sns</span><span class="o">.</span><span class="n">color_palette</span><span class="p">(</span><span class="s2">&quot;Set2&quot;</span><span class="p">)</span>
+    <span class="n">sphere</span> <span class="o">=</span> <span class="n">_check_sphere</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">info</span><span class="p">)</span>
+    <span class="n">pos</span><span class="p">,</span> <span class="n">outlines</span> <span class="o">=</span> <span class="n">_get_pos_outlines</span><span class="p">(</span><span class="n">info</span><span class="p">,</span> <span class="nb">range</span><span class="p">(</span>
+        <span class="nb">len</span><span class="p">(</span><span class="n">info</span><span class="o">.</span><span class="n">ch_names</span><span class="p">)),</span> <span class="n">sphere</span><span class="p">,</span> <span class="n">to_sphere</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">fig</span> <span class="o">=</span> <span class="n">plot_sensors</span><span class="p">(</span><span class="n">info</span><span class="p">,</span> <span class="n">show_names</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">show</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">fig</span><span class="o">.</span><span class="n">set_size_inches</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mi">12</span><span class="p">)</span>
+        
+    <span class="k">for</span> <span class="n">ix_cluster</span><span class="p">,</span> <span class="n">cluster</span> <span class="ow">in</span> <span class="n">df_network_results</span><span class="o">.</span><span class="n">iterrows</span><span class="p">():</span>
+        
+        <span class="n">t_values</span> <span class="o">=</span> <span class="n">cluster</span><span class="p">[</span><span class="s1">&#39;t_values&#39;</span><span class="p">]</span>          <span class="c1"># this is one t-value per connection in cluster</span>
+        <span class="n">p_value</span> <span class="o">=</span> <span class="n">cluster</span><span class="p">[</span><span class="s1">&#39;p_value&#39;</span><span class="p">]</span>            <span class="c1"># this is one p-value for the cluster</span>
+        <span class="n">connections</span> <span class="o">=</span> <span class="n">cluster</span><span class="p">[</span><span class="s1">&#39;connections&#39;</span><span class="p">]</span>    <span class="c1"># this contains the indices marking connections between sensors in cluster</span>
+        <span class="n">ixs_top_conns</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">t_values</span><span class="p">)[::</span><span class="o">-</span><span class="mi">1</span><span class="p">][:</span><span class="n">n_conns</span><span class="p">]</span>
+        
+        <span class="n">passed_label</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="k">for</span> <span class="n">ix_conn</span> <span class="ow">in</span> <span class="n">ixs_top_conns</span><span class="p">:</span>
+            <span class="n">ix_ch_1</span><span class="p">,</span> <span class="n">ix_ch_2</span> <span class="o">=</span> <span class="n">connections</span><span class="p">[</span><span class="n">ix_conn</span><span class="p">]</span>
+            <span class="n">x_coords</span> <span class="o">=</span> <span class="p">[</span><span class="n">pos</span><span class="p">[</span><span class="n">ix_ch_1</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span>
+                        <span class="n">pos</span><span class="p">[</span><span class="n">ix_ch_2</span><span class="p">][</span><span class="mi">0</span><span class="p">]]</span>
+            <span class="n">y_coords</span> <span class="o">=</span> <span class="p">[</span><span class="n">pos</span><span class="p">[</span><span class="n">ix_ch_1</span><span class="p">][</span><span class="mi">1</span><span class="p">],</span>
+                        <span class="n">pos</span><span class="p">[</span><span class="n">ix_ch_2</span><span class="p">][</span><span class="mi">1</span><span class="p">]]</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">passed_label</span><span class="p">:</span>
+                <span class="n">label</span> <span class="o">=</span> <span class="s1">&#39;Cluster </span><span class="si">{:d}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">ix_cluster</span><span class="p">))</span>
+                <span class="n">passed_label</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">label</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x_coords</span><span class="p">,</span> <span class="n">y_coords</span><span class="p">,</span> <span class="n">c</span><span class="o">=</span><span class="n">colors</span><span class="p">[</span><span class="n">ix_cluster</span><span class="p">],</span> <span class="n">label</span><span class="o">=</span><span class="n">label</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">frameon</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">&#39;Identified in </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">participant</span><span class="p">))</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span></div>
+
+    
+<div class="viewcode-block" id="plot_modulation_amp_corr">
+<a class="viewcode-back" href="../../source/clamnibs.html#clamnibs.viz.plot_modulation_amp_corr">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">plot_modulation_amp_corr</span><span class="p">(</span><span class="n">df_amp_phase_results</span><span class="p">):</span>
+<span class="w">    </span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Plot correlation of amplitude (depth) of modulation of two </span>
+<span class="sd">    outcome measures cross participants.</span>
+
+<span class="sd">    Parameters:</span>
+<span class="sd">    -----------</span>
+<span class="sd">    df_amp_phase_results: pandas.DataFrame</span>
+<span class="sd">        The dataframe containing the amplitude (depth) of modulation</span>
+<span class="sd">        for each participant and outcome measure.</span>
+<span class="sd">    &quot;&quot;&quot;</span></div>
+
+    
+    <span class="c1"># TODO</span>
+    <span class="c1"># Do for all clusters in dataframe</span>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">CLAM-NIBS</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2025, David Haslacher.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>
