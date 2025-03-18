@@ -1,21 +1,16 @@
 <p align="center"><img src="https://github.com/davidhaslacher/clam-nibs/assets/17557712/42767758-25fd-43ce-952e-53eda9240273" width="200"></p>
 
-# CLAM-NIBS Toolbox
+## CLAM-NIBS Toolbox
 
-## Overview
+### Overview
 This Python toolbox contains all software required to evaluate electroencephalography (EEG) or magnetoencephalography (MEG) data resulting from closed-loop amplitude-modulated non-invasive brain stimulation (CLAM-NIBS) experiments. A companion Matlab/Simulink toolbox to run these experiments will be released soon.
 
-## Features
-### Reconstruction of the target oscillation
-Reconstruct the target oscillation in data recorded during stimulation using a beamformer.
-### Extract single-trial metrics of brain activity and behavior
-Extract amplitude/frequency of the target oscillation, large-scale sensor-space connectivity, or behavioral metrics on a single-trial basis.
-### Phase-dependent modulation analysis
-Analyze phase-dependent modulation of power or frequency of the target oscillation. Perform network-based permutation testing of phase-dependent modulation of large-scale connectivity.
-### Support for various stimulation techniques
-Support for EEG/MEG data recorded during amplitude-modulated transcranial alternating current stimulation (AM-tACS) [1], temporal interference stimulation (TIS) [2], and temporally interfering magnetic stimulation (TIMS) [3].
-### Data-driven forward model computation
-Use spatio-spectral decomposition [4] to identify a target oscillation and determine its forward model in data recorded in absence of stimulation.
+### Features
+- **Reconstruction of the target oscillation:** Reconstruct the target oscillation in data recorded during stimulation using a beamformer.
+- **Extract single-trial metrics of brain activity and behavior:** Extract amplitude/frequency of the target oscillation, large-scale sensor-space connectivity, or behavioral metrics on a single-trial basis.
+- **Phase-dependent modulation analysis:** Analyze phase-dependent modulation of power or frequency of the target oscillation. Perform network-based permutation testing of phase-dependent modulation of large-scale connectivity.
+- **Support for various stimulation techniques:** Support for EEG/MEG data recorded during amplitude-modulated transcranial alternating current stimulation (AM-tACS) [1], temporal interference stimulation (TIS) [2], and temporally interfering magnetic stimulation (TIMS) [3].
+- **Data-driven forward model computation:** Use spatio-spectral decomposition [4] to identify a target oscillation and determine its forward model in data recorded in absence of stimulation.
 
 ## Installation
 To install the CLAM-NIBS toolbox, simply run:
@@ -66,32 +61,32 @@ plt.show()
 
 For more detailed examples and documentation, please refer to the following resources:
 
-- [Jupyter notebooks with examples](examples/)
-- [Documentation](www.clam-nibs.readthedocs.io)
+- [Examples](examples/)
+- [Documentation](https://clam-nibs.readthedocs.io/)
 
-## Which stimulation techniques does CLAM-NIBS encompass?
+### Which stimulation techniques does CLAM-NIBS encompass?
 CLAM-NIBS denotes the closed-loop operation of all amplitude-modulated electric or magnetic brain stimulation techniques. This includes amplitude-modulated transcranial alternating current stimulation (AM-tACS) [1], temporal interference stimulation (TIS) [2], and temporally interfering magnetic stimulation (TIMS) [3].
 
-## Why non-invasive brain stimulation?
+### Why non-invasive brain stimulation?
 Although invasive brain stimulation can be effective in treating neurological and psychiatric disorders, it is associated with medical risks, as well as costs associated with surgical implantation of stimulation and recording hardware. Non-invasive brain stimulation approaches do not carry with them the medical risks associated with surgery, and are often less expensive then invasive approaches. These methods can be more quickly implemented, and easily adjusted or discontinued.
 
-## Why closed-loop?
+### Why closed-loop?
 Non-invasive brain stimulation is known to exhibit substantial effect variability. In part, this variability results from the dependency of stimulation effects on the state of the brain during stimulation. For instance, effects of transcranial alternating current stimulation (tACS) are known to depend on the phase of targeted brain oscillations. Closed-loop stimulation protocols adapt electric or magnetic stimulation the brain state in real-time, e.g. by precisely delivering stimulation at a certain phase difference relative to targeted brain oscillations.
 
-## Why amplitude-modulated?
+### Why amplitude-modulated?
 In order to adapt electric or magnetic stimulation to targeted brain oscillations in real-time, brain activity must be measured during stimulation. This is hampered by strong electromagnetic artifacts in the recorded electroencephalography (EEG) or magnetoencephalography (MEG) signal at the frequency of stimulation (i.e. the frequency of targeted brain oscillations). During amplitude-modulated stimulation, the artifact at the target frequency is substantially smaller than during conventional sinusoidal stimulation, enabling more effective assessment of targeted brain oscillations.
 
-## References
+### References
 [1] Haslacher, David, et al. "Working memory enhancement using real-time phase-tuned transcranial alternating current stimulation." Brain Stimulation (2024).<br>
 [2] Violante, Ines R., et al. "Non-invasive temporal interference electrical stimulation of the human hippocampus." Nature neuroscience (2023).<br>
 [3] https://patents.google.com/patent/US20240017083A1/en <br>
 [4] Nikulin, Vadim V., et al. "A novel method for reliable and fast extraction of neuronal EEG/MEG oscillations on the basis of spatio-spectral decomposition." NeuroImage (2011).
 
-## License
+### License
 This project is licensed under the MIT License - see the LICENSE file for details.
 
-## Contributing
+### Contributing
 Contributions are welcome! Please read the CONTRIBUTING.md for details on the code of conduct and the process for submitting pull requests.
 
-## Contact
+### Contact
 For any questions or issues, please open an issue on GitHub or contact the author at haslacherdavid@gmail.com.
