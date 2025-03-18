@@ -17,3 +17,8 @@ documentation for details.
 
    modules
    clamnibs
+
+.. automodule:: clamnibs
+   :members:
+   :undoc-members:
+   :show-inheritance:

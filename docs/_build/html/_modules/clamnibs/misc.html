@@ -140,7 +140,7 @@
     <span class="k">return</span> <span class="n">trial_target_codes</span><span class="p">,</span> <span class="n">trial_accuracies</span>
 
 <div class="viewcode-block" id="compute_single_trial_behavior">
-<a class="viewcode-back" href="../../source/clamnibs.html#clamnibs.misc.compute_single_trial_behavior">[docs]</a>
+<a class="viewcode-back" href="../../clamnibs.html#clamnibs.misc.compute_single_trial_behavior">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">compute_single_trial_behavior</span><span class="p">(</span><span class="n">raw</span><span class="p">,</span> <span class="n">measure</span><span class="o">=</span><span class="s1">&#39;binary_accuracy&#39;</span><span class="p">,</span> <span class="n">correct_codes</span><span class="o">=</span><span class="p">[</span><span class="mi">10</span><span class="p">],</span> <span class="n">incorrect_codes</span><span class="o">=</span><span class="p">[</span><span class="mi">11</span><span class="p">,</span> <span class="mi">12</span><span class="p">]):</span>
 <span class="w">    </span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
@@ -205,7 +205,7 @@
 
 
 <div class="viewcode-block" id="compute_single_trial_rr">
-<a class="viewcode-back" href="../../source/clamnibs.html#clamnibs.misc.compute_single_trial_rr">[docs]</a>
+<a class="viewcode-back" href="../../clamnibs.html#clamnibs.misc.compute_single_trial_rr">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">compute_single_trial_rr</span><span class="p">(</span><span class="n">raw</span><span class="p">):</span>
 <span class="w">    </span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
@@ -283,7 +283,7 @@
 
 
 <div class="viewcode-block" id="compute_single_trial_scr">
-<a class="viewcode-back" href="../../source/clamnibs.html#clamnibs.misc.compute_single_trial_scr">[docs]</a>
+<a class="viewcode-back" href="../../clamnibs.html#clamnibs.misc.compute_single_trial_scr">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">compute_single_trial_scr</span><span class="p">(</span><span class="n">raw</span><span class="p">):</span>
 <span class="w">    </span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
@@ -354,7 +354,7 @@
 
     
 <div class="viewcode-block" id="save_calibration_data">
-<a class="viewcode-back" href="../../source/clamnibs.html#clamnibs.misc.save_calibration_data">[docs]</a>
+<a class="viewcode-back" href="../../clamnibs.html#clamnibs.misc.save_calibration_data">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">save_calibration_data</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">folder_path</span><span class="p">,</span> <span class="n">phase_delay</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
     <span class="n">exclude_idx_file_path</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">{}</span><span class="se">\\</span><span class="s1">exclude_idx.mat&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">folder_path</span><span class="p">)</span>
     <span class="n">p_target_file_path</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">{}</span><span class="se">\\</span><span class="s1">P_TARGET_</span><span class="si">{:d}</span><span class="s1">.mat&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">folder_path</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">obj</span><span class="o">.</span><span class="n">n_chs</span><span class="p">))</span>
@@ -380,7 +380,7 @@
         
 
 <div class="viewcode-block" id="df_to_array">
-<a class="viewcode-back" href="../../source/clamnibs.html#clamnibs.misc.df_to_array">[docs]</a>
+<a class="viewcode-back" href="../../clamnibs.html#clamnibs.misc.df_to_array">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">df_to_array</span><span class="p">(</span><span class="n">df_data</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Convert a DataFrame containing one data point (trial or participant) per row to an ndarray.</span>
@@ -435,6 +435,11 @@
     </div>
 </search>
 <script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../modules.html">clamnibs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../clamnibs.html">clamnibs package</a></li>
+</ul>
 
 <div class="relations">
 <h3>Related Topics</h3>

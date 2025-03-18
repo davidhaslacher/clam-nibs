@@ -67,7 +67,7 @@ plt.show()
 For more detailed examples and documentation, please refer to the following resources:
 
 - [Jupyter notebooks with examples](examples/)
-- [Documentation](INSERT_READTHEDOCS)
+- [Documentation](clam-nibs.readthedocs.io)
 
 ## Which stimulation techniques does CLAM-NIBS encompass?
 CLAM-NIBS denotes the closed-loop operation of all amplitude-modulated electric or magnetic brain stimulation techniques. This includes amplitude-modulated transcranial alternating current stimulation (AM-tACS) [1], temporal interference stimulation (TIS) [2], and temporally interfering magnetic stimulation (TIMS) [3].
