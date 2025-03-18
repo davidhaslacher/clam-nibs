@@ -9,8 +9,7 @@ CLAM-NIBS documentation
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
-
-   modules
+   
    clamnibs
 
 .. automodule:: clamnibs

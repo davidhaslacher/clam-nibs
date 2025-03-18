@@ -1,9 +1,6 @@
 clamnibs package
 ================
 
-Submodules
-----------
-
 clamnibs.base module
 --------------------
 
@@ -56,14 +53,6 @@ clamnibs.viz module
 -------------------
 
 .. automodule:: clamnibs.viz
-   :members:
-   :show-inheritance:
-   :undoc-members:
-
-Module contents
----------------
-
-.. automodule:: clamnibs
    :members:
    :show-inheritance:
    :undoc-members:
