@@ -30,6 +30,5 @@ import sys
 sys.path.insert(0, os.path.abspath('../'))  # Ensure your package is found
 extensions = ['sphinx.ext.autodoc',
               'sphinx.ext.napoleon',
-              'sphinx.ext.viewcode']
-import clamnibs
-print(clamnibs)
+              'sphinx.ext.viewcode',
+              'sphinx.ext.autosummary']
