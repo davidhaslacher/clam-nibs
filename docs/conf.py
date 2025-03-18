@@ -10,6 +10,9 @@ project = 'CLAM-NIBS'
 copyright = '2025, David Haslacher'
 author = 'David Haslacher'
 
+root_doc = 'index'
+master_doc = 'index'
+
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
