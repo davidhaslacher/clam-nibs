@@ -12,14 +12,14 @@ This Python toolbox contains all software required to evaluate electroencephalog
 - **Support for various stimulation techniques:** Support for EEG/MEG data recorded during amplitude-modulated transcranial alternating current stimulation (AM-tACS) [1], temporal interference stimulation (TIS) [2], and temporally interfering magnetic stimulation (TIMS) [3].
 - **Data-driven forward model computation:** Use spatio-spectral decomposition [4] to identify a target oscillation and determine its forward model in data recorded in absence of stimulation.
 
-## Installation
+### Installation
 To install the CLAM-NIBS toolbox, simply run:
 
 ```sh
 pip install clamnibs
 ```
 
-## Usage
+### Usage
 Here is an example of how to use the CLAM-NIBS toolbox to extract single-trial power spectral densities (PSDs) of activity in the target region and assess phase-dependent modulation of the target oscillation power:
 ```python
 import mne
@@ -57,7 +57,7 @@ test_modulation_psd(df_psd, test_level='participant', measure='power', plot=True
 plt.show()
 ```
 
-## Examples and Documentation
+### Examples and Documentation
 
 For more detailed examples and documentation, please refer to the following resources:
 
