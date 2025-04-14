@@ -20,6 +20,12 @@ def _get_lcmv_weights(COV, forward):
     w /= np.sqrt(w @ COV @ w.T)
     return w
 
+def _update_dict_with_mean(dct, keys):
+    mean = np.mean([dct[key] for key in keys], axis=0)
+    for key in keys:
+        dct[key] = mean
+    return dct
+
 def get_target(obj):
     
     """Compute the target signal from EEG data using LCMV beamforming.
@@ -53,17 +59,29 @@ def get_target(obj):
     ixs_goods = _get_ixs_goods(obj)
     target_codes = obj.marker_definition.keys()
     target_phases = obj.marker_definition.values()
-    if 'ns' in target_phases and (any(isinstance(x, int) for x in target_phases) or 'ol' in target_phases):
-        raise Exception('get_target currently does not support a mixture of stimulation and no stimulation data')
     if isinstance(obj, mne.Epochs):
         epochs_events = obj.events
         epochs_data = obj.get_data(ixs_goods)
         forward_goods = obj.forward_full[ixs_goods]
-        COV = np.mean([np.cov(np.real(np.concatenate(epochs_data[epochs_events[:, 2]
-                      == target_code], axis=-1))) for target_code in target_codes], axis=0)
-        w = _get_lcmv_weights(COV, forward_goods)
-        target = np.array([w @ ep for ep in epochs_data]).squeeze()
+        covs = {}
+        for tc, tp in zip(target_codes, target_phases, strict=True):
+            covs[tc] = np.cov(np.real(np.concatenate(epochs_data[epochs_events[:, 2]
+                                    == tc], axis=-1)))
+        # ensure the covariance matrix for closed-loop conditions is the average of all 
+        # closed-loop conditions to avoid suppression of correlated sources
+        cl_codes = [tc for tc, tp in zip(target_codes, target_phases, strict=True) if isinstance(tp, float)]
+        covs = _update_dict_with_mean(covs, cl_codes)
+        ws = {}
+        for tc in covs.keys():
+            ws[tc] = _get_lcmv_weights(covs[tc], forward_goods)
+        target = []
+        for tc, ep in zip(epochs_events[:, 2], epochs_data, strict=True):
+            target.append(ws[tc] @ ep)
+        target = np.array(target).squeeze()
     else:
+        
+        # TODO: Warn here if raw data contains a mixture of no stimulation and stimulation segments.
+        
         raw_events = mne.events_from_annotations(obj)[0]
         raw_data = obj.get_data(ixs_goods)
         

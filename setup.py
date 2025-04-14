@@ -5,7 +5,7 @@ with open('requirements.txt') as f:
 
 setup(
     name='clamnibs',
-    version='0.1.15',
+    version='0.1.16',
     description='Analysis of closed-loop amplitude-modulated non-invasive brain stimulation experiments',
     long_description='This toolbox contains all software required to implement closed-loop amplitude-modulated non-invasive brain stimulation (CLAM-NIBS) and evaluate the resulting electroencephalography (EEG) or magnetoencephalography (MEG) data.',
     author='David Haslacher',
@@ -18,4 +18,5 @@ setup(
         'License :: OSI Approved :: MIT License',
         'Operating System :: OS Independent',
     ],
+    license='MIT'
 )

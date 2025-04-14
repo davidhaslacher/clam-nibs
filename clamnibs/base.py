@@ -9,6 +9,13 @@ from mne.time_frequency import psd_array_welch
 import matplotlib.pyplot as plt
 import seaborn as sns
 
+def _is_valid_target_phase(x):
+    if isinstance(x, float):
+        return (-np.pi <= x <= np.pi) or (0 <= x <= 2 * np.pi)
+    elif isinstance(x, str):
+        return x in ('ns', 'ol')
+    return False
+
 class RawCLAM(RawBrainVision):
 
     """Initialize a RawCLAM object.
@@ -106,6 +113,13 @@ class RawCLAM(RawBrainVision):
             if tmin is None or tmax is None:
                 raise Exception(
                     'tmin and tmax are required parameters (cannot be None) for epoching data when a marker definition is provided')
+                
+        for key, value in marker_definition.items():
+            if not _is_valid_target_phase(value):
+                raise Exception(
+                    f"""{key}:{value} is not a valid marker definition. Allowed values are either phases in the range of 
+                    -π to π or 0 to 2π, or a string ('ns' for no stimulation or 'ol' for open-loop stimulation)."""
+                )
         
         self.marker_definition = marker_definition
         self.tmin = tmin
