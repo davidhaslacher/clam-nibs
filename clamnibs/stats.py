@@ -81,7 +81,7 @@ def _dft_amp_stat_group(*args, orig_args=None):
     for orig_arg in orig_args:
         dft_amps = _vectorized_dft_amp(*orig_arg)
         all_dft_amps.append(dft_amps)
-    return np.mean(all_dft_amps, axis=0)
+    return np.nanmean(all_dft_amps, axis=0)
 
 def _wrap(phases):
     return np.angle(np.exp(1j*phases))
@@ -108,7 +108,16 @@ def test_sensor_network_modulation(
         The Info object for topographic plotting.
         
     test_level : str, optional (default='participant')
-        The level at which the test should be performed ('participant' or 'group').
+        The level at which the test should be performed ('participant', 'group_same', or 'group_different').
+        If test_level='participant', a separate test for phase-dependent modulation
+            is performed for each participant, such that a sinusoidal function is fit to the data
+            averaged over trials within each phase bin.
+        If test_level='group_same', a group-level test is performed, where the optimal target phase is 
+            assumed to be the same for all participants, such that a sinusoidal function is fit to the data 
+            averaged over trials and participants within each phase bin.
+        If test_level='group_different', a group-level test is performed, where the optimal target phase 
+            is assumed to be different for each participant, such that the fitting is performed at the 
+            participant level, but the test statistic (modulation amplitude) is averaged over participants.
         
     measure : str, optional (default='phase_lag_index')
         The connectivity measure employed.
@@ -131,19 +140,21 @@ def test_sensor_network_modulation(
                                                                  measure,
                                                                  threshold_percentile)
         return df_results
-    elif test_level == 'group':
-        df_results = _test_sensor_network_modulation_group(df_data, 
+    elif test_level == 'group_same':
+        raise Exception('test_sensor_network_modulation does not yet support test_level=\'group_same\'')
+    elif test_level == 'group_different':
+        df_results = _test_sensor_network_modulation_group_different(df_data, 
                                                            info, 
                                                            measure, 
                                                            threshold_percentile)
         return df_results
     else:
         raise Exception(
-            'Test level should be either \'participant\' or \'group\'')
+            'Test level should be either \'participant\', \'group_same\', or \'group_different\'')
 
 
 def _test_sensor_network_modulation_participant(df_data, info, measure, threshold_percentile):
-    gb_participant = df_data.groupby('participant')
+    gb_participant = df_data.sort_values('participant').groupby('participant')
     df_results = pd.DataFrame()
     for participant, df_participant in gb_participant:
         gb_target_phases = df_participant.sort_values(
@@ -223,9 +234,9 @@ def _test_sensor_network_modulation_participant(df_data, info, measure, threshol
     return df_results
 
 
-def _test_sensor_network_modulation_group(df_data, info, measure, threshold_percentile):
+def _test_sensor_network_modulation_group_different(df_data, info, measure, threshold_percentile):
     all_data = []
-    gb_participants = df_data.groupby('participant')
+    gb_participants = df_data.sort_values('participant').groupby('participant')
     for participant, df_participant in gb_participants:
         gb_target_phases = df_participant.sort_values(
             'target_phase').groupby('target_phase')
@@ -307,7 +318,7 @@ def test_sensor_cluster_modulation(
         df_data,
         info,
         test_level='participant',
-        measure='amplitude',
+        measure='power',
         threshold_percentile=95,
         plot=False):
     
@@ -326,9 +337,18 @@ def test_sensor_cluster_modulation(
         The Info object for topographic plotting.
         
     test_level : str, optional (default='participant')
-        The level at which the test should be performed ('participant' or 'group').
+        The level at which the test should be performed ('participant', 'group_same', or 'group_different').
+        If test_level='participant', a separate test for phase-dependent modulation
+            is performed for each participant, such that a sinusoidal function is fit to the data
+            averaged over trials within each phase bin.
+        If test_level='group_same', a group-level test is performed, where the optimal target phase is 
+            assumed to be the same for all participants, such that a sinusoidal function is fit to the data 
+            averaged over trials and participants within each phase bin.
+        If test_level='group_different', a group-level test is performed, where the optimal target phase 
+            is assumed to be different for each participant, such that the fitting is performed at the 
+            participant level, but the test statistic (modulation amplitude) is averaged over participants.
         
-    measure : str, optional (default='amplitude')
+    measure : str, optional (default='power')
         The outcome measure employed.
         
     plot : str or bool, optional (default=False)
@@ -350,8 +370,10 @@ def test_sensor_cluster_modulation(
                                                                  threshold_percentile, 
                                                                  plot)
         return df_results
-    elif test_level == 'group':
-        df_results = _test_sensor_cluster_modulation_group(df_data, 
+    elif test_level == 'group_same':
+        raise Exception('test_sensor_cluster_modulation does not yet support test_level=\'group_same\'')
+    elif test_level == 'group_different':
+        df_results = _test_sensor_cluster_modulation_group_different(df_data, 
                                                            info, 
                                                            measure, 
                                                            threshold_percentile,
@@ -359,11 +381,10 @@ def test_sensor_cluster_modulation(
         return df_results
     else:
         raise Exception(
-            'Test level should be either \'participant\' or \'group\'')
-
+            'Test level should be either \'participant\', \'group_same\', or \'group_different\'')
 
 def _test_sensor_cluster_modulation_participant(df_data, info, measure, threshold_percentile, plot):
-    gb_participant = df_data.groupby('participant')
+    gb_participant = df_data.sort_values('participant').groupby('participant')
     df_results = pd.DataFrame()
     for participant, df_participant in gb_participant:
         gb_target_phases = df_participant.sort_values(
@@ -444,9 +465,9 @@ def _test_sensor_cluster_modulation_participant(df_data, info, measure, threshol
     return df_results
 
 
-def _test_sensor_cluster_modulation_group(df_data, info, measure, threshold_percentile, plot):
+def _test_sensor_cluster_modulation_group_different(df_data, info, measure, threshold_percentile, plot):
     all_data = []
-    gb_participants = df_data.groupby('participant')
+    gb_participants = df_data.sort_values('participant').groupby('participant')
     for participant, df_participant in gb_participants:
         gb_target_phases = df_participant.sort_values(
             'target_phase').groupby('target_phase')
@@ -525,12 +546,12 @@ def _test_sensor_cluster_modulation_group(df_data, info, measure, threshold_perc
 def test_modulation(
         df_data,
         test_level='participant',
-        measure='amplitude',
+        measure='power',
         agg_func=np.nanmean,
         plot=False,
         plot_mode='box_strip'):
     
-    """Test phase-dependent modulation of arbitrary outcome measure (e.g. amplitude).
+    """Test phase-dependent modulation of arbitrary outcome measure (e.g. power).
 
     This function performs a permutation test to identify phase-dependent modulation
     of the outcome measure by CLAM-NIBS, and plots the results.
@@ -542,9 +563,18 @@ def test_modulation(
         for each participant.
         
     test_level : str, optional (default='participant')
-        The level at which the test should be performed ('participant' or 'group').
+        The level at which the test should be performed ('participant', 'group_same', or 'group_different').
+        If test_level='participant', a separate test for phase-dependent modulation
+            is performed for each participant, such that a sinusoidal function is fit to the data
+            averaged over trials within each phase bin.
+        If test_level='group_same', a group-level test is performed, where the optimal target phase is 
+            assumed to be the same for all participants, such that a sinusoidal function is fit to the data 
+            averaged over trials and participants within each phase bin.
+        If test_level='group_different', a group-level test is performed, where the optimal target phase 
+            is assumed to be different for each participant, such that the fitting is performed at the 
+            participant level, but the test statistic (modulation amplitude) is averaged over participants.
         
-    measure : str, optional (default='amplitude')
+    measure : str, optional (default='power')
         The outcome measure employed.
         
     agg_func : callable, optimal (default=np.nanmean)
@@ -558,7 +588,7 @@ def test_modulation(
     plot_mode : str, optional (default='box_strip')
         The plotting mode. If all data points should be shown, use 'box_strip' for a boxplot and stripplot.
         If data points should only be visualized as aggregated measures (e.g. accuracy across all trials or 
-        variability across all ECG RR intervals), use 'bar' for a barplot.
+            variability across all ECG RR intervals), use 'bar' for a barplot.
 
     Raises:
     -------
@@ -573,20 +603,22 @@ def test_modulation(
     if test_level == 'participant':
         df_results = _test_modulation_participant(df_data=df_data, measure=measure, agg_func=agg_func, plot=plot, plot_mode=plot_mode)
         return df_results
-    elif test_level == 'group':
-        df_results = _test_modulation_group(df_data=df_data, measure=measure, agg_func=np.nanmean, plot=plot, plot_mode=plot_mode)
+    elif test_level == 'group_same':
+        df_data = average_over_trials(df_data, agg_func=agg_func)
+        df_results = _test_modulation_group_same(df_data=df_data, measure=measure, agg_func=np.nanmean, plot=plot, plot_mode=plot_mode)
         return df_results
+    elif test_level == 'group_different':
+        raise Exception("test_modulation does not yet support test_level='group_different'")
     else:
         raise Exception(
-            'Test level should be either \'participant\' or \'group\'')
+            'Test level should be either \'participant\', \'group_same\', or \'group_different\'')
 
 
 def _test_modulation_participant(df_data, measure, agg_func, plot, plot_mode):
     df_results = pd.DataFrame()
-    participants = df_data['participant'].unique()
-    for participant in participants:
-        df_participant = df_data[df_data['participant'] == participant]
-        gb_target_phase = df_participant.groupby(by='target_phase')
+    gb_participants = df_data.sort_values('participant').groupby('participant')
+    for participant, df_participant in gb_participants:
+        gb_target_phase = df_participant.sort_values('target_phase').groupby('target_phase')
         target_phases = []
         target_measures = []
         for target_phase, df_target_phase in gb_target_phase:
@@ -663,14 +695,13 @@ def _test_modulation_participant(df_data, measure, agg_func, plot, plot_mode):
         df_results = pd.concat([df_results, df_append])
     return df_results
 
-
-def _test_modulation_group(df_data, measure, agg_func, plot, plot_mode):
-    gb_target_phase = df_data.groupby('target_phase')
+def _test_modulation_group_same(df_data, measure, agg_func, plot, plot_mode):
+    gb_target_phase = df_data.sort_values('target_phase').groupby('target_phase')
     target_phases = []
     target_measures = []
     for target_phase, df_target_phase in gb_target_phase:
         target_phases.append(target_phase)
-        target_measures.append(df_target_phase['value'].to_numpy())
+        target_measures.append(df_target_phase.sort_values('participant')['value'].to_numpy())
     if len(target_phases) == 2:
         tval, pval = ttest_ind(target_measures[0], target_measures[1])
         tval_unit = 'ttest_ind'
@@ -742,8 +773,27 @@ def _test_modulation_group(df_data, measure, agg_func, plot, plot_mode):
 
 def _group_mean_psds(group):
     stacked = np.vstack(group['value'])
-    mean = np.mean(stacked, axis=0)
+    mean = np.nanmean(stacked, axis=0)
     return pd.Series([mean])
+
+def average_over_trials(df, agg_func=np.nanmean):
+    """Average over trials for each participant and target phase.
+
+    Parameters:
+    -----------
+    df : pandas.DataFrame
+        The DataFrame containing the data to be averaged.
+        
+    agg_func : callable
+        The function used to average the data (e.g. np.nanmean or np.nanmedian).
+
+    Returns:
+    --------
+    pandas.DataFrame
+        The DataFrame with averaged values.
+    """
+    df_avg = df.groupby([col for col in df.columns if col != 'value']).agg({'value' : agg_func}).reset_index()
+    return df_avg
 
 def test_modulation_psd(
         df_data,
@@ -753,7 +803,7 @@ def test_modulation_psd(
         plot=False,
         plot_mode='box_strip'):
     
-    """Test phase-dependent modulation of amplitude, frequency, or aperiodic exponent from power spectral density.
+    """Test phase-dependent modulation of power, frequency, or aperiodic exponent from power spectral density.
 
     This function performs a permutation test to identify phase-dependent modulation
     of the outcome measure by CLAM-NIBS, and plots the results.
@@ -765,7 +815,16 @@ def test_modulation_psd(
         for each participant.
         
     test_level : str, optional (default='participant')
-        The level at which the test should be performed ('participant' or 'group').
+        The level at which the test should be performed ('participant', 'group_same', or 'group_different').
+        If test_level='participant', a separate test for phase-dependent modulation
+            is performed for each participant, such that a sinusoidal function is fit to the data
+            averaged over trials within each phase bin.
+        If test_level='group_same', a group-level test is performed, where the optimal target phase is 
+            assumed to be the same for all participants, such that a sinusoidal function is fit to the data 
+            averaged over trials and participants within each phase bin.
+        If test_level='group_different', a group-level test is performed, where the optimal target phase 
+            is assumed to be different for each participant, such that the fitting is performed at the 
+            participant level, but the test statistic (modulation amplitude) is averaged over participants.
         
     measure : str, optional (default='power')
         The outcome measure employed ('power', 'frequency', or 'aperiodic').
@@ -797,36 +856,80 @@ def test_modulation_psd(
         raise Exception('Only power, frequency, and aperiodic exponent are supported')
     df_data = df_data[df_data['measure'] == 'psd']
     if test_level == 'participant':
-        df_results = _test_modulation_participant_psd(df_data=df_data, measure=measure, freq_lim_tol=freq_lim_tol, plot=plot)
+        df_results = _test_modulation_psd_participant(df_data=df_data, measure=measure, freq_lim_tol=freq_lim_tol, plot=plot)
         return df_results
-    elif test_level == 'group':
-        df_results = _test_modulation_psd_group(df_data=df_data, measure=measure, freq_lim_tol=freq_lim_tol, plot=plot)
+    elif test_level == 'group_same':
+        agg_func = partial(_fooof_agg, 
+                    measure=measure,  
+                    freqs=df_data.attrs['freqs'], 
+                    l_freq_target=df_data.attrs['l_freq_target'] - freq_lim_tol, 
+                    h_freq_target=df_data.attrs['h_freq_target'] + freq_lim_tol)
+        df_data = average_over_trials(df_data, agg_func=agg_func)
+        df_results = _test_modulation_group_same(df_data=df_data, measure=measure, agg_func=np.nanmean, plot=plot, plot_mode=plot_mode)
         return df_results
+    elif test_level == 'group_different':
+        raise Exception("test_modulation does not yet support test_level='group_different'")
     else:
         raise Exception(
-            'Test level should be either \'participant\' or \'group\'')
+            'Test level should be either \'participant\', \'group_same\', or \'group_different\'')
+        
+def extract_psd_measure(freqs, psd, l_freq_target, h_freq_target, measure='power'):
+    """Extract the specified measure from the power spectral density (PSD) using FOOOF.
+
+    Parameters:
+    -----------
+    freqs : array-like
+        The frequencies corresponding to the PSD values.
+        
+    psd : array-like
+        The PSD values.
+        
+    l_freq_target : float
+        The lower frequency limit of the target frequency range.
+        
+    h_freq_target : float
+        The higher frequency limit of the target frequency range.
+        
+    measure : str, optional (default='power')
+        The measure to extract ('power', 'frequency', or 'aperiodic').
+
+    Returns:
+    --------
+    float
+        The extracted measure value.
+    """
+    
+    fm = FOOOF(verbose=False)
+    fm.fit(freqs, psd)
+    freq, pow = get_band_peak_fm(fm, [l_freq_target, h_freq_target], select_highest=True)[:2]
+    aper = fm.get_results().aperiodic_params[-1]
+    if measure == 'power':
+        return pow
+    elif measure == 'frequency':
+        return freq
+    elif measure == 'aperiodic':
+        return aper
         
 def _fooof_agg(x, measure, freqs, l_freq_target, h_freq_target):
-    x = [x_.mean(axis=0) for x_ in x]
+    # If we are aggregating over a single column of PSDs in a DataFrame
+    if isinstance(x, pd.Series):
+        return_scalar = True
+        x = [np.mean(x, axis=0)]
+    # If we are aggregating separately over multiple lists of PSDs (one per target phase)
+    else:
+        return_scalar = False
+        x = [x_.mean(axis=0) for x_ in x]
     agg_measures = []
-    for psd in x:
-        fm = FOOOF(verbose=False)
-        fm.fit(freqs, psd)
-        freq, pow = get_band_peak_fm(fm, [l_freq_target, h_freq_target], select_highest=True)[:2]
-        aper = fm.get_results().aperiodic_params[-1]
-        if measure == 'power':
-            agg_measures.append(pow)
-        elif measure == 'frequency':
-            agg_measures.append(freq)
-        elif measure == 'aperiodic':
-            agg_measures.append(aper)
-            
+    for x_ in x:
+        agg_measures.append(extract_psd_measure(freqs, x_, l_freq_target, h_freq_target, measure=measure))
         # fm.plot()
         # plt.axvline(freq, color='r', linestyle='--')
         # plt.title('{:.2f} Hz, {:.2f} a.u.'.format(freq, pow))
         # plt.show()
-            
-    return agg_measures
+    if return_scalar:
+        return agg_measures[0]
+    else:
+        return agg_measures
 
 def _fooof_stat(x, measure, freqs, l_freq_target, h_freq_target, stat):
     agg_measures = _fooof_agg(x, measure, freqs, l_freq_target, h_freq_target)
@@ -835,12 +938,11 @@ def _fooof_stat(x, measure, freqs, l_freq_target, h_freq_target, stat):
     elif stat == 'dft':
         return _dft(agg_measures)[0]
 
-def _test_modulation_participant_psd(df_data, measure, freq_lim_tol, plot):
+def _test_modulation_psd_participant(df_data, measure, freq_lim_tol, plot):
     df_results = pd.DataFrame()
-    participants = df_data['participant'].unique()
-    for participant in participants:
-        df_participant = df_data[df_data['participant'] == participant]
-        gb_target_phase = df_participant.groupby('target_phase')
+    gb_participants = df_data.sort_values('participant').groupby('participant')
+    for participant, df_participant in gb_participants:
+        gb_target_phase = df_participant.sort_values('target_phase').groupby('target_phase')
         target_phases = []
         target_psds = []
         for target_phase, df_target_phase in gb_target_phase:
@@ -907,72 +1009,73 @@ def _test_modulation_participant_psd(df_data, measure, freq_lim_tol, plot):
         df_results = pd.concat([df_results, df_append])
     return df_results
 
-def _test_modulation_psd_group(df_data, measure, freq_lim_tol, plot):
-    gb_target_phase = df_data.groupby('target_phase')
-    target_phases = []
-    target_psds = []
-    for target_phase, df_target_phase in gb_target_phase:
-        target_phases.append(target_phase)
-        target_psds.append(df_target_phase['value'].to_numpy())
-    if len(target_phases) == 2:
-        stat = 'ttest'
-        alternative = 'two-sided'
-    else:
-        stat = 'dft'
-        alternative = 'greater'
-    stat_fun = partial(_fooof_stat, 
-                        measure=measure, 
-                        freqs=df_data.attrs['freqs'], 
-                        l_freq_target=df_data.attrs['l_freq_target'] - freq_lim_tol, 
-                        h_freq_target=df_data.attrs['h_freq_target'] + freq_lim_tol,
-                        stat=stat)
-    res = permutation_test(target_psds,
-                            lambda *x: stat_fun(x),
-                            permutation_type='independent',
-                            alternative=alternative,
-                            n_resamples=1000)
-    tval = res.statistic
-    pval = res.pvalue
-    tval_unit = stat
-    if plot:
-        plt.figure()
-        x = target_phases
-        x = [round(np.rad2deg(ph)) for ph in x]
-        y = _fooof_agg(target_psds, 
-                        measure=measure, 
-                        freqs=df_data.attrs['freqs'], 
-                        l_freq_target=df_data.attrs['l_freq_target'] - freq_lim_tol, 
-                        h_freq_target=df_data.attrs['h_freq_target'] + freq_lim_tol)
-        df_plot = pd.DataFrame(
-            {'Target Phase (°)': x, '{}'.format(measure): y})
-        sns.barplot(
-            df_plot,
-            x='Target Phase (°)',
-            y='{}'.format(measure),
-            color='k',
-            alpha=0.5,
-            errorbar=None,
-            zorder=0)
-        if len(target_phases) == 2:
-            plt.title('t = {:.3e}, p = {:.3e}'.format(tval, pval))
-        else:
-            avgs = df_plot['{}'.format(measure)].to_numpy()
-            _dft(avgs, plot_sine=True)
-            plt.title('dft_amp = {:.3e}, p = {:.3e}'.format(tval, pval))
-        sns.despine()
-        if isinstance(plot, str):
-            matplotlib.rcParams['pdf.fonttype'] = 42
-            matplotlib.rcParams['ps.fonttype'] = 42
-            sns.set_context('paper')
-            if not os.path.exists(plot):
-                os.makedirs(plot,exist_ok=True)
-            plt.savefig('{}_modulation_group.pdf'.format(measure))
-            plt.close()
-    df_results = pd.DataFrame({'participant': ['group'],
-                              't_unit': [tval_unit],
-                              't_value': [tval],
-                              'p_value': [pval]})
-    return df_results
+# This needs to be fixed
+# def _test_modulation_psd_group_different(df_data, measure, freq_lim_tol, plot):
+#     gb_target_phase = df_data.sort_values('target_phase').groupby('target_phase')
+#     target_phases = []
+#     target_psds = []
+#     for target_phase, df_target_phase in gb_target_phase:
+#         target_phases.append(target_phase)
+#         target_psds.append(df_target_phase.sort_values('participant')['value'].to_numpy())
+#     if len(target_phases) == 2:
+#         stat = 'ttest'
+#         alternative = 'two-sided'
+#     else:
+#         stat = 'dft'
+#         alternative = 'greater'
+#     stat_fun = partial(_fooof_stat, 
+#                         measure=measure, 
+#                         freqs=df_data.attrs['freqs'], 
+#                         l_freq_target=df_data.attrs['l_freq_target'] - freq_lim_tol, 
+#                         h_freq_target=df_data.attrs['h_freq_target'] + freq_lim_tol,
+#                         stat=stat)
+#     res = permutation_test(target_psds,
+#                             lambda *x: stat_fun(x),
+#                             permutation_type='independent',
+#                             alternative=alternative,
+#                             n_resamples=1000)
+#     tval = res.statistic
+#     pval = res.pvalue
+#     tval_unit = stat
+#     if plot:
+#         plt.figure()
+#         x = target_phases
+#         x = [round(np.rad2deg(ph)) for ph in x]
+#         y = _fooof_agg(target_psds, 
+#                         measure=measure, 
+#                         freqs=df_data.attrs['freqs'], 
+#                         l_freq_target=df_data.attrs['l_freq_target'] - freq_lim_tol, 
+#                         h_freq_target=df_data.attrs['h_freq_target'] + freq_lim_tol)
+#         df_plot = pd.DataFrame(
+#             {'Target Phase (°)': x, '{}'.format(measure): y})
+#         sns.barplot(
+#             df_plot,
+#             x='Target Phase (°)',
+#             y='{}'.format(measure),
+#             color='k',
+#             alpha=0.5,
+#             errorbar=None,
+#             zorder=0)
+#         if len(target_phases) == 2:
+#             plt.title('t = {:.3e}, p = {:.3e}'.format(tval, pval))
+#         else:
+#             avgs = df_plot['{}'.format(measure)].to_numpy()
+#             _dft(avgs, plot_sine=True)
+#             plt.title('dft_amp = {:.3e}, p = {:.3e}'.format(tval, pval))
+#         sns.despine()
+#         if isinstance(plot, str):
+#             matplotlib.rcParams['pdf.fonttype'] = 42
+#             matplotlib.rcParams['ps.fonttype'] = 42
+#             sns.set_context('paper')
+#             if not os.path.exists(plot):
+#                 os.makedirs(plot,exist_ok=True)
+#             plt.savefig('{}_modulation_group.pdf'.format(measure))
+#             plt.close()
+#     df_results = pd.DataFrame({'participant': ['group'],
+#                               't_unit': [tval_unit],
+#                               't_value': [tval],
+#                               'p_value': [pval]})
+#     return df_results
 
 def get_network_modulation_amp_phase(df_network_results, df_network_data):
     
@@ -1003,7 +1106,7 @@ def get_network_modulation_amp_phase(df_network_results, df_network_data):
         
         for ix_cluster, cluster in df_network_results_participant.iterrows():
             
-            t_value = np.mean(cluster['t_values'])  # average over t-values per connection in cluster
+            t_value = np.nanmean(cluster['t_values'])  # average over t-values per connection in cluster
             p_value = cluster['p_value']            # this is one p-value for the cluster
             ixs_row, ixs_col = np.array(cluster['connections']).T    # this contains the indices marking connections between sensors in cluster
             cluster_data = network_data_participant[:, :, ixs_row, ixs_col].mean(-1)
@@ -1013,7 +1116,7 @@ def get_network_modulation_amp_phase(df_network_results, df_network_data):
                                       'measure':[measure],
                                       'cluster':[ix_cluster],
                                       'amplitude_raw':[amp],
-                                      'amplitude_perc':[2*100*amp/np.mean(avgs)],
+                                      'amplitude_perc':[2*100*amp/np.nanmean(avgs)],
                                       'phase_rad':[phase],
                                       'phase_deg':[round(np.rad2deg(phase))]})
             df_results = pd.concat([df_results, df_append])

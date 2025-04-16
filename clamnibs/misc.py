@@ -12,6 +12,14 @@ from scipy.io import savemat
 import warnings
 from scipy.stats import zscore
 
+def concat_dfs(dfs):
+    attrs = dfs[-1].attrs
+    for df in dfs:
+        df.attrs = {}
+    df = pd.concat(dfs)
+    df.attrs = attrs
+    return df
+
 def _get_main_target_phase(marker_definition, events):
     target_codes = marker_definition.keys()
     events = events[np.isin(events[:, 2], target_codes)]
@@ -230,7 +238,7 @@ def compute_single_trial_rr(raw):
         main_target_phase = _get_main_target_phase(marker_definition, events)
         trial_target_phases = [main_target_phase] * len(trial_rrs)
     trial_rrs = np.array(trial_rrs)
-    trial_target_phases = np.array(trial_target_phases)
+    trial_target_phases = np.array(trial_target_phases, dtype=object)
     zscores = zscore(trial_rrs)
     mask = (zscores > -1.6) & (zscores < 1.6)
     trial_rrs = trial_rrs[mask]

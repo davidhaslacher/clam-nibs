@@ -166,6 +166,9 @@ class RawCLAM(RawBrainVision):
             
             from . import beamformer
             beamformer.set_flip(self)
+        events = mne.events_from_annotations(self)[0]
+        if not np.all(np.isin(list(self.marker_definition.keys()), events[:, 2])):
+            raise Exception('Some markers in the marker definition do not exist in the data')
             
     def plot_forward(self, sensors=False):
         from .misc import _get_ixs_goods
