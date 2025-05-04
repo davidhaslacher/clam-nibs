@@ -208,6 +208,8 @@ def _test_sensor_network_modulation_participant(df_data, info, measure, threshol
                                                                  n_jobs=1,
                                                                  verbose=True)
             tvals_unit = 'dft_amp'
+        print('Found {:d} clusters'.format(len(clusters)))
+        print('p-values: ', pvals)
         tvals_sig = []
         pvals_sig = []
         conns_sig = []
@@ -426,6 +428,8 @@ def _test_sensor_cluster_modulation_participant(df_data, info, measure, threshol
                                                                  n_jobs=1,
                                                                  verbose=True)
             tvals_unit = 'dft_amp'
+        print('Found {:d} clusters'.format(len(clusters)))
+        print('p-values: ', pvals)
         tvals_sig = []
         pvals_sig = []
         channels_sig = []

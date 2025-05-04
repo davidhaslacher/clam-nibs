@@ -10,6 +10,7 @@ import seaborn as sns
 from mne.viz import plot_sensors
 import pandas as pd
 from .stats import _dft
+from mne import pick_info, pick_types
 
 def _onpick_sensor(event, fig, ax, pos, ch_names, bads, scatter):
     if event is not None:
@@ -58,8 +59,8 @@ def set_bads(obj, default_bads):
     if not (isinstance(obj, RawCLAM) or isinstance(obj, EpochsCLAM)):
         raise Exception('set_bads can only be applied to RawCLAM or EpochsCLAM objects')
 
-    info = obj.info
-    ch_names = obj.ch_names
+    info = pick_info(obj.info, pick_types(obj.info, eeg=True, exclude=[]))
+    ch_names = info.ch_names
 
     pos = np.empty((len(info["chs"]), 3))
     for ci, ch in enumerate(info['chs']):

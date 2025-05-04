@@ -49,7 +49,7 @@ def _circmean(phase):
 
 
 def _pli(phase1, phase2):
-    return np.mean(np.sign(_wrap(phase1 - phase2)))
+    return np.abs(np.mean(np.sign(_wrap(phase1 - phase2))))
 
 def _fmt(string):
     return string.replace(
