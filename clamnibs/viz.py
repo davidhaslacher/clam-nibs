@@ -214,6 +214,7 @@ def plot_network_modulation_values(df_network_results, df_network_data, particip
                                                                                 participant_applied_to, 
                                                                                 int(ix_cluster), 
                                                                                 p_value))
+        sns.despine()
 
 def plot_network_modulation_topo(df_network_results, n_conns, participant, info):
     

@@ -2,7 +2,7 @@ import numpy as np
 from mne.stats import permutation_cluster_test, permutation_cluster_1samp_test
 from scipy.sparse import coo_matrix
 import scipy
-from mne.stats import ttest_ind_no_p
+from mne.stats import ttest_ind_no_p, ttest_1samp_no_p
 from mne.viz.topomap import _get_pos_outlines
 from mne.utils.check import _check_sphere
 import matplotlib.pyplot as plt
@@ -141,7 +141,11 @@ def test_sensor_network_modulation(
                                                                  threshold_percentile)
         return df_results
     elif test_level == 'group_same':
-        raise Exception('test_sensor_network_modulation does not yet support test_level=\'group_same\'')
+        df_data = df_data.groupby([col for col in df_data.columns if col != 'value']).agg({'value' : np.mean}).reset_index()
+        df_results = _test_sensor_network_modulation_group_same(df_data, 
+                                                                 info, 
+                                                                 measure,
+                                                                 threshold_percentile)
     elif test_level == 'group_different':
         df_results = _test_sensor_network_modulation_group_different(df_data, 
                                                            info, 
@@ -235,6 +239,88 @@ def _test_sensor_network_modulation_participant(df_data, info, measure, threshol
         df_results = pd.concat([df_results, df_append])
     return df_results
 
+def _test_sensor_network_modulation_group_same(df_data, info, measure, threshold_percentile):
+    gb_target_phases = df_data.sort_values(
+        'target_phase').groupby('target_phase')
+    target_phases = []
+    data = []
+    for target_phase, df_target_phase in gb_target_phases:
+        target_phases.append(target_phase)
+        data.append(np.stack(df_target_phase['value']))
+    n_obs = data[0].shape[0]
+    n_chs = data[0].shape[1]
+    n_conns = n_chs**2
+    data = [d.reshape(-1, n_conns) for d in data]
+    adjacency = np.zeros((n_conns, n_conns))
+    for ix_conn_1 in range(n_conns):
+        for ix_conn_2 in range(ix_conn_1 + 1, n_conns):
+            ix_ch_1 = ix_conn_1 // n_chs
+            ix_ch_2 = ix_conn_1 % n_chs
+            ix_ch_3 = ix_conn_2 // n_chs
+            ix_ch_4 = ix_conn_2 % n_chs
+            if not {ix_ch_1, ix_ch_2}.isdisjoint({ix_ch_3, ix_ch_4}):
+                adjacency[ix_conn_1, ix_conn_2] = 1
+    adjacency += adjacency.T
+    adjacency = coo_matrix(adjacency)
+    if len(data) == 2:
+        data_diff = data[0] - data[1]
+        # use t-statistic
+        stat_fun = ttest_1samp_no_p
+        threshold = np.nanpercentile(
+            [stat_fun(data_diff[:, ix]) for ix in range(n_conns)], threshold_percentile)
+        tvals, clusters, pvals, _ = permutation_cluster_1samp_test(data_diff,
+                                                                   threshold=threshold,
+                                                                   adjacency=adjacency,
+                                                                   out_type='indices',
+                                                                   step_down_p=0,
+                                                                   t_power=1,
+                                                                   tail=0,
+                                                                   n_jobs=1,
+                                                                   verbose=True)
+        tvals_unit = 'ttest_dep'
+    else:
+        stat_fun = _dft_amp_stat
+        threshold = np.nanpercentile(
+            [stat_fun(*[d[:, ix] for d in data]) for ix in range(n_conns)], threshold_percentile)
+        global first_pass_done
+        first_pass_done = False
+        stat_fun = partial(
+            _dft_amp_stat_group,
+            orig_args=data)
+        tvals, clusters, pvals, _ = permutation_cluster_test([d.copy() for d in data],
+                                                             threshold=threshold,
+                                                             adjacency=adjacency,
+                                                             out_type='indices',
+                                                             step_down_p=0,
+                                                             t_power=1,
+                                                             stat_fun=stat_fun,
+                                                             tail=0,
+                                                             n_jobs=1,
+                                                             verbose=True,
+                                                             buffer_size=n_conns)
+        tvals_unit = 'dft_amp'
+    print('Found {:d} clusters'.format(len(clusters)))
+    print('p-values: ', pvals)
+    tvals_sig = []
+    pvals_sig = []
+    conns_sig = []
+    for ix_cluster, (cluster, pval) in enumerate(zip(clusters, pvals)):
+        if pval < 0.05:
+            tvals_sig.append(tvals[cluster].mean())
+            pvals_sig.append(pval)
+            conns_cluster = []
+            for ix_conn in cluster[0]:
+                ix_ch_1 = ix_conn // n_chs
+                ix_ch_2 = ix_conn % n_chs
+                conns_cluster.append([ix_ch_1, ix_ch_2])
+            conns_sig.append(conns_cluster)
+    df_results = pd.DataFrame({'participant': ['all'] * len(tvals_sig),
+                              't_unit': [tvals_unit] * len(tvals_sig),
+                              't_value': tvals_sig,
+                              'p_value': pvals_sig,
+                              'connections': conns_sig})
+    return df_results
+
 
 def _test_sensor_network_modulation_group_different(df_data, info, measure, threshold_percentile):
     all_data = []
@@ -277,7 +363,7 @@ def _test_sensor_network_modulation_group_different(df_data, info, measure, thre
         _dft_amp_stat_group,
         orig_args=all_data)
     dummy_data = [np.empty((n_participants, n_conns)) for ix in range(n_phases)]
-    threshold = np.nanpercentile(stat_fun(dummy_data), threshold_percentile)
+    threshold = np.nanpercentile(stat_fun(dummy_data), threshold_percentile) # this takes the threshold for the real data, not dummy data, because that's how stat_fun is constructed
     # Hacky, have to set this to false again, because it is used in permutation_cluster_test
     first_pass_done = False
     tvals, clusters, pvals, _ = permutation_cluster_test(dummy_data,
