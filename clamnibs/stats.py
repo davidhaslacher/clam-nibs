@@ -53,9 +53,53 @@ def _vectorized_dft_amp(*args):
     amps = np.array([amp[0] for amp in amps])
     return amps
 
+
+def _vectorized_dft_amp_group_same(arr):
+    """
+    Compute DFT amplitude over the phase axis for each participant and connection in parallel.
+
+    Parameters
+    ----------
+    arr : array-like
+        Array with shape (n_phases, n_participants, n_conns).
+
+    Returns
+    -------
+    amps : ndarray
+        Amplitudes with shape (n_participants, n_conns).
+    """
+    arr = np.asarray(arr)
+    if arr.ndim != 3:
+        raise ValueError("arr must have shape (n_phases, n_participants, n_conns)")
+    n_phases, n_participants, n_conns = arr.shape
+    # helper that computes _dft amplitude for a single (participant, conn) pair
+    def _proc(pair):
+        p, c = pair
+        amp, _ = _dft(arr[:, p, c])
+        return amp
+
+    pairs = [(p, c) for p in range(n_participants) for c in range(n_conns)]
+    amps_flat = Parallel(n_jobs=-1)(delayed(_proc)(pc) for pc in pairs)
+    amps = np.array(amps_flat).reshape(n_participants, n_conns)
+    return amps
+
 def _dft_amp_stat(*args):
     return _vectorized_dft_amp(*args)
 
+# For use with cluster/network-based permutation tests with "group_same" option (same optimal phases for all participants)
+# This performs permutations within each subject, hacky solution
+### orig_args is an array of shape (n_phases, n_participants, n_conns)
+def _dft_amp_stat_group_same(*args, orig_args=None):
+    global first_pass_done
+    if first_pass_done:
+        permuted_args = permutation(orig_args)
+        dft_amps = _vectorized_dft_amp_group_same(permuted_args)
+    else:
+        first_pass_done = True
+        dft_amps = _vectorized_dft_amp_group_same(orig_args)
+    return np.mean(dft_amps, axis=0)
+
+# For use with cluster/network-based permutation tests with "group_different" option (different optimal phases for each participant)
 # This is a hacky solution to make permutation_cluster_test compatible with the SINE FIT BINNED procedure outlined in [1].
 # Unfortunately, permutation_cluster_test can't handle trial-level data for multiple participants.
 # Therefore, args are ignored and orig_args are used here.
@@ -63,8 +107,8 @@ def _dft_amp_stat(*args):
 # Trials are averaged within each phase bin and the DFT amplitude is computed for each participant.
 # The group-level test statistic is then the DFT amplitude averaged over participants.
 # [1] Zoefel, Benedikt, et al. "How to test for phasic modulation of neural and behavioural responses." Neuroimage 202 (2019): 116175.
-# orig_args is a list of arrays, one per participant i, each of shape (n_phases, n_epochs_i, n_conns)
-def _dft_amp_stat_group(*args, orig_args=None):
+### orig_args is a list of arrays, one per participant i, each of shape (n_phases, n_epochs_i, n_conns)
+def _dft_amp_stat_group_different(*args, orig_args=None):
     global first_pass_done
     # Shuffle if original test statistic was computed (first pass done)
     if first_pass_done:
@@ -146,6 +190,7 @@ def test_sensor_network_modulation(
                                                                  info, 
                                                                  measure,
                                                                  threshold_percentile)
+        return df_results
     elif test_level == 'group_different':
         df_results = _test_sensor_network_modulation_group_different(df_data, 
                                                            info, 
@@ -279,15 +324,18 @@ def _test_sensor_network_modulation_group_same(df_data, info, measure, threshold
                                                                    verbose=True)
         tvals_unit = 'ttest_dep'
     else:
-        stat_fun = _dft_amp_stat
-        threshold = np.nanpercentile(
-            [stat_fun(*[d[:, ix] for d in data]) for ix in range(n_conns)], threshold_percentile)
+        data = np.array(data)
         global first_pass_done
         first_pass_done = False
         stat_fun = partial(
-            _dft_amp_stat_group,
+            _dft_amp_stat_group_same,
             orig_args=data)
-        tvals, clusters, pvals, _ = permutation_cluster_test([d.copy() for d in data],
+        dummy_data = np.empty_like(data)
+        threshold = np.nanpercentile(stat_fun(dummy_data), threshold_percentile) # this takes the threshold for the real data, not dummy data, because that's how stat_fun is constructed
+        print(f'Threshold at {threshold_percentile}th percentile: {threshold}')
+        # Hacky, have to set this to false again, because it is used in permutation_cluster_test
+        first_pass_done = False
+        tvals, clusters, pvals, _ = permutation_cluster_test(list(dummy_data),
                                                              threshold=threshold,
                                                              adjacency=adjacency,
                                                              out_type='indices',
@@ -356,11 +404,11 @@ def _test_sensor_network_modulation_group_different(df_data, info, measure, thre
     adjacency = coo_matrix(adjacency)
     # Unfortunately, permutation_cluster_test can't handle single-trial data for multiple participants.
     # Therefore, we will pass dummy data of the expected shape here and implement the permutation and 
-    # test statistic computation in _dft_amp_stat_group. See _dft_amp_stat_group for more information.
+    # test statistic computation in _dft_amp_stat_group_different. See _dft_amp_stat_group_different for more information.
     global first_pass_done
     first_pass_done = False
     stat_fun = partial(
-        _dft_amp_stat_group,
+        _dft_amp_stat_group_different,
         orig_args=all_data)
     dummy_data = [np.empty((n_participants, n_conns)) for ix in range(n_phases)]
     threshold = np.nanpercentile(stat_fun(dummy_data), threshold_percentile) # this takes the threshold for the real data, not dummy data, because that's how stat_fun is constructed
@@ -576,11 +624,11 @@ def _test_sensor_cluster_modulation_group_different(df_data, info, measure, thre
     n_chs = all_data[0].shape[2]
     # Unfortunately, permutation_cluster_test can't handle single-trial data for multiple participants.
     # Therefore, we will pass dummy data of the expected shape here and implement the permutation and 
-    # test statistic computation in _dft_amp_stat_group. See _dft_amp_stat_group for more information.
+    # test statistic computation in _dft_amp_stat_group_different. See _dft_amp_stat_group_different for more information.
     global first_pass_done
     first_pass_done = False
     stat_fun = partial(
-        _dft_amp_stat_group,
+        _dft_amp_stat_group_different,
         orig_args=all_data)
     dummy_data = [np.empty((n_participants, n_chs)) for ix in range(n_phases)]
     threshold = np.nanpercentile(stat_fun(dummy_data), threshold_percentile)
