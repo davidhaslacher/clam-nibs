@@ -69,7 +69,7 @@ def get_target(obj):
                                     == tc], axis=-1)))
         # ensure the covariance matrix for closed-loop conditions is the average of all 
         # closed-loop conditions to avoid suppression of correlated sources
-        cl_codes = [tc for tc, tp in zip(target_codes, target_phases, strict=True) if isinstance(tp, float)]
+        cl_codes = [tc for tc, tp in zip(target_codes, target_phases, strict=True) if tp not in ('open-loop', 'no-stim')]
         covs = _update_dict_with_mean(covs, cl_codes)
         ws = {}
         for tc in covs.keys():

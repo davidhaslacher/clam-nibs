@@ -9,11 +9,13 @@ from mne.time_frequency import psd_array_welch
 import matplotlib.pyplot as plt
 import seaborn as sns
 
+_VALID_LABELS = ('open-loop', 'no-stim', 'optimal', 'suboptimal')
+
 def _is_valid_target_phase(x):
     if isinstance(x, float):
         return (-np.pi <= x <= np.pi) or (0 <= x <= 2 * np.pi)
     elif isinstance(x, str):
-        return x in ('ns', 'ol')
+        return x in _VALID_LABELS
     return False
 
 class RawCLAM(RawBrainVision):
@@ -45,7 +47,9 @@ class RawCLAM(RawBrainVision):
     marker_definition : dict, optional
         Dictionary containing marker definitions.
         Mapping from target phase markers (e.g. 1 - 6) to target phases [-pi, pi].
-        Target phases can also take the values 'ns' (no stimulation) or 'ol' (open-loop stimulation).
+        Target phases can also take the string values 'open-loop' (open-loop stimulation),
+        'no-stim' (no stimulation), 'optimal' (optimal target phase), or 'suboptimal'
+        (suboptimal target phase).
     sfreq : float or None, optional
         New sampling frequency, or None if the data should not be resampled.
     ignore_calibration_files: bool, optional
@@ -117,8 +121,9 @@ class RawCLAM(RawBrainVision):
         for key, value in marker_definition.items():
             if not _is_valid_target_phase(value):
                 raise Exception(
-                    f"""{key}:{value} is not a valid marker definition. Allowed values are either phases in the range of 
-                    -π to π or 0 to 2π, or a string ('ns' for no stimulation or 'ol' for open-loop stimulation)."""
+                    f"{key}:{value} is not a valid marker definition. "
+                    f"Allowed values are: a phase in radians (float, range -π to π or 0 to 2π), "
+                    f"or one of the strings 'open-loop', 'no-stim', 'optimal', 'suboptimal'."
                 )
         
         self.marker_definition = marker_definition

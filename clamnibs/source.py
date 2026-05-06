@@ -61,6 +61,11 @@ def compute_phase_tracking(raw, plot=False):
         raise Exception(
             'Phase tracking can only be computed for data with CLAM-tACS')
 
+    if any(isinstance(tp, str) for tp in marker_definition.values()):
+        raise Exception(
+            'Phase tracking requires numeric target phases. '
+            'It cannot be computed for conditions like \'optimal\', \'suboptimal\', \'open-loop\', or \'no-stim\'.')
+
     df_phase = pd.DataFrame({'Target Phase': [], 'Actual Phase': []})
     target_codes = list(marker_definition.keys())
     target_phases = list(marker_definition.values())

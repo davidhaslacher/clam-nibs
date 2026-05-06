@@ -11,7 +11,7 @@ import mne
 from mne.viz import plot_topomap
 from functools import partial
 import pandas as pd
-from scipy.stats import ttest_ind
+from scipy.stats import ttest_ind, ttest_rel
 from numpy.random import permutation
 from scipy.stats import permutation_test
 import os
@@ -337,6 +337,7 @@ def _test_sensor_network_modulation_group_same(df_data, info, measure, threshold
         first_pass_done = False
         tvals, clusters, pvals, _ = permutation_cluster_test(list(dummy_data),
                                                              threshold=threshold,
+                                                             n_permutations=100,
                                                              adjacency=adjacency,
                                                              out_type='indices',
                                                              step_down_p=0,
@@ -734,9 +735,9 @@ def test_modulation(
         If the test level is not \'participant\' or \'group\'
     """
     
-    if np.any(np.isin(['ol', 'ns'], df_data['target_phase'])):
-        raise Exception('test_modulation test for phase-dependent modulation, it currently \
-                        does not support open-loop or no stimulation conditions')
+    if np.any(np.isin(['open-loop', 'no-stim'], df_data['target_phase'])):
+        raise Exception('test_modulation tests for phase-dependent modulation, it does not '
+                        'support open-loop or no-stim conditions')
     df_data = df_data[df_data['measure'] == measure]
     if test_level == 'participant':
         df_results = _test_modulation_participant(df_data=df_data, measure=measure, agg_func=agg_func, plot=plot, plot_mode=plot_mode)
@@ -746,6 +747,10 @@ def test_modulation(
         df_results = _test_modulation_group_same(df_data=df_data, measure=measure, agg_func=np.nanmean, plot=plot, plot_mode=plot_mode)
         return df_results
     elif test_level == 'group_different':
+        if np.any(np.isin(['optimal', 'suboptimal'], df_data['target_phase'])):
+            raise Exception("test_level='group_different' is not supported for 'optimal'/'suboptimal' conditions, "
+                            "because these conditions are comparable across participants by design. "
+                            "Use test_level='group_same' instead.")
         raise Exception("test_modulation does not yet support test_level='group_different'")
     else:
         raise Exception(
@@ -776,18 +781,20 @@ def _test_modulation_participant(df_data, measure, agg_func, plot, plot_mode):
             tval_unit = 'dft_amp'
         if plot:
             plt.figure()
+            has_string_phases = any(isinstance(ph, str) for ph in target_phases)
+            x_label = 'Condition' if has_string_phases else 'Target Phase (°)'
             x = np.concatenate([[target_phases[ix]] * len(target_measures[ix])
                                 for ix in range(len(target_phases))])
-            x = [round(np.rad2deg(ph)) for ph in x]
+            x = [ph if isinstance(ph, str) else round(np.rad2deg(ph)) for ph in x]
             y = np.concatenate(target_measures)
             df_plot = pd.DataFrame(
-                {'Target Phase (°)': x, '{}'.format(measure): y})
-            df_plot_agg = df_plot.sort_values('Target Phase (°)').groupby('Target Phase (°)') \
+                {x_label: x, '{}'.format(measure): y})
+            df_plot_agg = df_plot.sort_values(x_label).groupby(x_label) \
                             .agg({'{}'.format(measure) : agg_func}).reset_index()
             if plot_mode == 'box_strip':
                 sns.boxplot(
                     df_plot,
-                    x='Target Phase (°)',
+                    x=x_label,
                     y='{}'.format(measure),
                     color='k',
                     boxprops=dict(
@@ -797,7 +804,7 @@ def _test_modulation_participant(df_data, measure, agg_func, plot, plot_mode):
                     showfliers=False)
                 sns.stripplot(
                     df_plot,
-                    x='Target Phase (°)',
+                    x=x_label,
                     y='{}'.format(measure),
                     color='r',
                     alpha=0.8,
@@ -805,7 +812,7 @@ def _test_modulation_participant(df_data, measure, agg_func, plot, plot_mode):
             elif plot_mode == 'bar':
                 sns.barplot(
                     df_plot_agg,
-                    x='Target Phase (°)',
+                    x=x_label,
                     y='{}'.format(measure),
                     color='k',
                     alpha=0.5,
@@ -841,8 +848,8 @@ def _test_modulation_group_same(df_data, measure, agg_func, plot, plot_mode):
         target_phases.append(target_phase)
         target_measures.append(df_target_phase.sort_values('participant')['value'].to_numpy())
     if len(target_phases) == 2:
-        tval, pval = ttest_ind(target_measures[0], target_measures[1])
-        tval_unit = 'ttest_ind'
+        tval, pval = ttest_rel(target_measures[0], target_measures[1])
+        tval_unit = 'ttest_rel'
     else:
         res = permutation_test(target_measures,
                                 lambda *x: _dft(np.array([agg_func(x_) for x_ in x]))[0],
@@ -853,18 +860,20 @@ def _test_modulation_group_same(df_data, measure, agg_func, plot, plot_mode):
         pval = res.pvalue
         tval_unit = 'dft_amp'
     if plot:
+        has_string_phases = any(isinstance(ph, str) for ph in target_phases)
+        x_label = 'Condition' if has_string_phases else 'Target Phase (°)'
         x = np.concatenate([[target_phases[ix]] * len(target_measures[ix])
                             for ix in range(len(target_phases))])
-        x = [round(np.rad2deg(ph)) for ph in x]
+        x = [ph if isinstance(ph, str) else round(np.rad2deg(ph)) for ph in x]
         y = np.concatenate(target_measures)
         df_plot = pd.DataFrame(
-            {'Target Phase (°)': x, '{}'.format(measure): y})
-        df_plot_agg = df_plot.sort_values('Target Phase (°)').groupby('Target Phase (°)') \
+            {x_label: x, '{}'.format(measure): y})
+        df_plot_agg = df_plot.sort_values(x_label).groupby(x_label) \
                 .agg({'{}'.format(measure) : agg_func}).reset_index()
         if plot_mode == 'box_strip':
             sns.boxplot(
                 df_plot,
-                x='Target Phase (°)',
+                x=x_label,
                 y='{}'.format(measure),
                 color='k',
                 boxprops=dict(
@@ -874,7 +883,7 @@ def _test_modulation_group_same(df_data, measure, agg_func, plot, plot_mode):
                 showfliers=False)
             sns.stripplot(
                 df_plot,
-                x='Target Phase (°)',
+                x=x_label,
                 y='{}'.format(measure),
                 color='r',
                 alpha=0.8,
@@ -882,7 +891,7 @@ def _test_modulation_group_same(df_data, measure, agg_func, plot, plot_mode):
         elif plot_mode == 'bar':
             sns.barplot(
                 df_plot_agg,
-                x='Target Phase (°)',
+                x=x_label,
                 y='{}'.format(measure),
                 color='k',
                 alpha=0.5,
@@ -987,9 +996,9 @@ def test_modulation_psd(
         If the test level is not \'participant\' or \'group\'
     """
     
-    if np.any(np.isin(['ol', 'ns'], df_data['target_phase'])):
-        raise Exception('test_modulation test for phase-dependent modulation, it currently \
-                        does not support open-loop or no stimulation conditions')
+    if np.any(np.isin(['open-loop', 'no-stim'], df_data['target_phase'])):
+        raise Exception('test_modulation_psd tests for phase-dependent modulation, it does not '
+                        'support open-loop or no-stim conditions')
     if measure not in ['power', 'frequency', 'aperiodic']:
         raise Exception('Only power, frequency, and aperiodic exponent are supported')
     df_data = df_data[df_data['measure'] == 'psd']
@@ -1006,6 +1015,10 @@ def test_modulation_psd(
         df_results = _test_modulation_group_same(df_data=df_data, measure=measure, agg_func=np.nanmean, plot=plot, plot_mode=plot_mode)
         return df_results
     elif test_level == 'group_different':
+        if np.any(np.isin(['optimal', 'suboptimal'], df_data['target_phase'])):
+            raise Exception("test_level='group_different' is not supported for 'optimal'/'suboptimal' conditions, "
+                            "because these conditions are comparable across participants by design. "
+                            "Use test_level='group_same' instead.")
         raise Exception("test_modulation does not yet support test_level='group_different'")
     else:
         raise Exception(
@@ -1108,18 +1121,20 @@ def _test_modulation_psd_participant(df_data, measure, freq_lim_tol, plot):
         tval_unit = stat
         if plot:
             plt.figure()
+            has_string_phases = any(isinstance(ph, str) for ph in target_phases)
+            x_label = 'Condition' if has_string_phases else 'Target Phase (°)'
             x = target_phases
-            x = [round(np.rad2deg(ph)) for ph in x]
+            x = [ph if isinstance(ph, str) else round(np.rad2deg(ph)) for ph in x]
             y = _fooof_agg(target_psds, 
                            measure=measure, 
                            freqs=df_data.attrs['freqs'], 
                            l_freq_target=df_data.attrs['l_freq_target'] - freq_lim_tol, 
                            h_freq_target=df_data.attrs['h_freq_target'] + freq_lim_tol)
             df_plot = pd.DataFrame(
-                {'Target Phase (°)': x, '{}'.format(measure): y})
+                {x_label: x, '{}'.format(measure): y})
             sns.barplot(
                 df_plot,
-                x='Target Phase (°)',
+                x=x_label,
                 y='{}'.format(measure),
                 color='k',
                 alpha=0.5,

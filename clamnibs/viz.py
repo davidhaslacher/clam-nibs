@@ -181,18 +181,20 @@ def plot_network_modulation_values(df_network_results, df_network_data, particip
         p_value = cluster['p_value']            # this is one p-value for the cluster
         ixs_row, ixs_col = np.array(cluster['connections']).T    # this contains the indices marking connections between sensors in cluster
         cluster_data = network_data[:, :, ixs_row, ixs_col].mean(-1)
+        has_string_phases = any(isinstance(ph, str) for ph in target_phases)
+        x_label = 'Condition' if has_string_phases else 'Target Phase (°)'
         x = np.concatenate([[target_phases[ix]] * len(cluster_data[ix])
                             for ix in range(len(target_phases))])
-        x = [round(np.rad2deg(ph)) for ph in x]
+        x = [ph if isinstance(ph, str) else round(np.rad2deg(ph)) for ph in x]
         y = np.concatenate(cluster_data)
         df_plot = pd.DataFrame(
-                {'Target Phase (°)': x, '{}'.format(measure): y})
-        df_plot_agg = df_plot.sort_values('Target Phase (°)').groupby('Target Phase (°)') \
+                {x_label: x, '{}'.format(measure): y})
+        df_plot_agg = df_plot.sort_values(x_label).groupby(x_label) \
                 .agg({'{}'.format(measure) : np.mean}).reset_index()
         plt.figure()
         sns.boxplot(
             df_plot,
-            x='Target Phase (°)',
+            x=x_label,
             y='{}'.format(measure),
             color='k',
             boxprops=dict(
@@ -202,7 +204,7 @@ def plot_network_modulation_values(df_network_results, df_network_data, particip
             showfliers=False)
         sns.stripplot(
             df_plot,
-            x='Target Phase (°)',
+            x=x_label,
             y='{}'.format(measure),
             color='r',
             alpha=0.8,
