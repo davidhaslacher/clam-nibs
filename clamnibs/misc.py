@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 from math import degrees
 from statistics import mode
-from .base import RawCLAM, EpochsCLAM
+from .base import RawCLAM, EpochsCLAM, EpochsCLAMVariable
 from scipy.io import savemat
 import warnings
 from scipy.stats import zscore
@@ -176,7 +176,7 @@ def compute_single_trial_behavior(raw, measure='binary_accuracy', correct_codes=
                               'value': trial_values})
     return df_result
 
-def compute_single_trial_rr(raw):
+def compute_single_trial_rr(raw, end_codes=None):
     
     """
     Compute single-trial RR-intervals and assign them to CLAM-NIBS target phase.
@@ -185,6 +185,9 @@ def compute_single_trial_rr(raw):
     -----------
     raw : RawCLAM
         The RawCLAM object containing the raw data to analyze.
+    end_codes : list of int or None, optional
+        If provided, use variable-length epochs defined by start markers (from marker_definition)
+        to end markers (end_codes). If None, use fixed-length epochs (default).
 
     Returns:
     --------
@@ -203,8 +206,6 @@ def compute_single_trial_rr(raw):
     marker_definition = raw.marker_definition
     target_codes = list(marker_definition.keys())
     sfreq = raw.info['sfreq']
-    tmin = raw.tmin
-    tmax = raw.tmax
     participant = raw.participant
     session = raw.session
     design = raw.design
@@ -217,20 +218,41 @@ def compute_single_trial_rr(raw):
     if design == 'trial_wise':
         n_targets = len(target_codes)
         events_ecg = find_ecg_events(raw, ch_name='ecg')[0]
-        events_trials = mne.events_from_annotations(raw)[0]
-        events_trials = events_trials[np.isin(events_trials[:, 2], target_codes)]
-        trial_target_codes = []
-        trial_rrs = []
-        for ev_trial in events_trials:
-            this_trial_rpeaks = []
-            for ev_ecg in events_ecg:
-                if ev_ecg[0] > ev_trial[0] + tmin * \
-                        sfreq and ev_ecg[0] < ev_trial[0] + tmax * sfreq:
-                    this_trial_rpeaks.append(ev_ecg[0])
-            if len(this_trial_rpeaks) >= 2:
-                this_trial_rrs = np.diff(this_trial_rpeaks) / sfreq
-                trial_target_codes.extend([ev_trial[2]] * len(this_trial_rrs))
-                trial_rrs.extend(this_trial_rrs)
+        
+        if end_codes is not None:
+            epochs = EpochsCLAMVariable(raw, end_codes=end_codes, apply_hil=False)
+            trial_target_codes = []
+            trial_rrs = []
+            for ix_ep in range(len(epochs)):
+                ev = epochs.events[ix_ep]
+                ep_start = ev[0]
+                ep_duration_samples = epochs._data[ix_ep].shape[1]
+                ep_end = ep_start + ep_duration_samples
+                this_trial_rpeaks = []
+                for ev_ecg in events_ecg:
+                    if ev_ecg[0] > ep_start and ev_ecg[0] < ep_end:
+                        this_trial_rpeaks.append(ev_ecg[0])
+                if len(this_trial_rpeaks) >= 2:
+                    this_trial_rrs = np.diff(this_trial_rpeaks) / sfreq
+                    trial_target_codes.extend([ev[2]] * len(this_trial_rrs))
+                    trial_rrs.extend(this_trial_rrs)
+        else:
+            tmin = raw.tmin
+            tmax = raw.tmax
+            events_trials = mne.events_from_annotations(raw)[0]
+            events_trials = events_trials[np.isin(events_trials[:, 2], target_codes)]
+            trial_target_codes = []
+            trial_rrs = []
+            for ev_trial in events_trials:
+                this_trial_rpeaks = []
+                for ev_ecg in events_ecg:
+                    if ev_ecg[0] > ev_trial[0] + tmin * \
+                            sfreq and ev_ecg[0] < ev_trial[0] + tmax * sfreq:
+                        this_trial_rpeaks.append(ev_ecg[0])
+                if len(this_trial_rpeaks) >= 2:
+                    this_trial_rrs = np.diff(this_trial_rpeaks) / sfreq
+                    trial_target_codes.extend([ev_trial[2]] * len(this_trial_rrs))
+                    trial_rrs.extend(this_trial_rrs)
         trial_target_phases = [marker_definition.get(x) for x in trial_target_codes]
     else:
         events_ecg = find_ecg_events(raw, ch_name='ecg')[0]
@@ -251,7 +273,7 @@ def compute_single_trial_rr(raw):
                               'value': trial_rrs})
     return df_result
 
-def compute_single_trial_scr(raw):
+def compute_single_trial_scr(raw, end_codes=None):
     
     """
     Compute single-trial area under the curve (AUC) of the skin conductance response (SCR) [1],
@@ -261,6 +283,9 @@ def compute_single_trial_scr(raw):
     -----------
     raw : RawCLAM
         The RawCLAM object containing the raw data to analyze.
+    end_codes : list of int or None, optional
+        If provided, use variable-length epochs defined by start markers (from marker_definition)
+        to end markers (end_codes). If None, use fixed-length epochs (default).
 
     Returns:
     --------
@@ -283,8 +308,6 @@ def compute_single_trial_scr(raw):
     marker_definition = raw.marker_definition
     target_codes = list(marker_definition.keys())
     sfreq = raw.info['sfreq']
-    tmin = raw.tmin
-    tmax = raw.tmax
     participant = raw.participant
     session = raw.session
     design = raw.design
@@ -300,8 +323,13 @@ def compute_single_trial_scr(raw):
     raw._data -= raw._data.min()
     
     if design == 'trial_wise':
-        epochs = EpochsCLAM(raw, apply_hil = False)
-        epoch_aucs = epochs.get_data().squeeze().sum(-1)
+        if end_codes is not None:
+            epochs = EpochsCLAMVariable(raw, end_codes=end_codes, apply_hil=False)
+            epoch_aucs = [ep.squeeze().sum(-1) for ep in epochs.get_data()]
+            epoch_aucs = np.array(epoch_aucs)
+        else:
+            epochs = EpochsCLAM(raw, apply_hil=False)
+            epoch_aucs = epochs.get_data().squeeze().sum(-1)
     else:
         epoch_aucs = raw.get_data().squeeze().sum(-1)
         

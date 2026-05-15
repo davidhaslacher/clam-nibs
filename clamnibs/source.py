@@ -14,7 +14,7 @@ from math import degrees
 from scipy.stats import f_oneway
 from mne.time_frequency import psd_array_welch
 from .misc import _get_ixs_goods, _get_main_target_phase
-from .base import RawCLAM, EpochsCLAM
+from .base import RawCLAM, EpochsCLAM, EpochsCLAMVariable
 from .beamformer import get_target
 
 def compute_phase_tracking(raw, plot=False):
@@ -119,7 +119,7 @@ def compute_phase_tracking(raw, plot=False):
         [tp - ap for tp, ap in zip(target_phases, mean_actual_phases)])
     return phase_delay
 
-def compute_single_trial_amplitude(raw, measure='hilbert_amp'):
+def compute_single_trial_amplitude(raw, measure='hilbert_amp', end_codes=None):
     
     """
     Compute single-trial amplitude of target oscillation for each CLAM-NIBS target phase.
@@ -131,6 +131,9 @@ def compute_single_trial_amplitude(raw, measure='hilbert_amp'):
     measure : str, optional
         The method used to compute amplitude modulation. It can be one of the following:
             - 'hilbert_amp': Amplitude estimation based on Hilbert transform (default).
+    end_codes : list of int or None, optional
+        If provided, use variable-length epochs defined by start markers (from marker_definition)
+        to end markers (end_codes). If None, use fixed-length epochs (default).
 
     Returns:
     --------
@@ -167,16 +170,25 @@ def compute_single_trial_amplitude(raw, measure='hilbert_amp'):
         raise Exception(
             'Raw object must be filtered into the target frequency range for amplitude estimation based on Hilbert')
     if design == 'trial_wise':
-        epochs = EpochsCLAM(raw)
+        if end_codes is not None:
+            epochs = EpochsCLAMVariable(raw, end_codes=end_codes)
+        else:
+            epochs = EpochsCLAM(raw)
         target_hil = get_target(epochs)
     else:
         target_hil = get_target(raw.copy().apply_hilbert())
         target_hil = target_hil[None, :, :]
     epoch_amps = []
-    for epoch_hil in target_hil:
-        if measure == 'hilbert_amp':
-            amp = np.mean(np.abs(epoch_hil))
-        epoch_amps.append(amp)
+    if isinstance(target_hil, list):
+        for epoch_hil in target_hil:
+            if measure == 'hilbert_amp':
+                amp = np.mean(np.abs(epoch_hil))
+            epoch_amps.append(amp)
+    else:
+        for epoch_hil in target_hil:
+            if measure == 'hilbert_amp':
+                amp = np.mean(np.abs(epoch_hil))
+            epoch_amps.append(amp)
     if design == 'trial_wise':
         epoch_target_phases = [marker_definition.get(x) for x in epochs.events[:, 2]]
     else:
@@ -189,7 +201,7 @@ def compute_single_trial_amplitude(raw, measure='hilbert_amp'):
                               'value': epoch_amps})
     return df_result
 
-def compute_single_trial_psd(raw):
+def compute_single_trial_psd(raw, end_codes=None):
     
     """
     Compute single-trial power spectral density of target oscillation for each CLAM-NIBS target phase.
@@ -198,6 +210,9 @@ def compute_single_trial_psd(raw):
     -----------
     raw : RawCLAM
         The RawCLAM object containing the raw data to analyze.
+    end_codes : list of int or None, optional
+        If provided, use variable-length epochs defined by start markers (from marker_definition)
+        to end markers (end_codes). If None, use fixed-length epochs (default).
 
     Returns:
     --------
@@ -229,20 +244,36 @@ def compute_single_trial_psd(raw):
         raise Exception(
             'Raw object must have a passband of at least 1 - 30 Hz for power spectral density estimation')
     if design == 'trial_wise':
-        epochs = EpochsCLAM(raw, apply_hil=False)
+        if end_codes is not None:
+            epochs = EpochsCLAMVariable(raw, end_codes=end_codes, apply_hil=False)
+        else:
+            epochs = EpochsCLAM(raw, apply_hil=False)
         target = get_target(epochs)
     else:
         target = get_target(raw)
         target = target[None, :, :]
-    assert np.isrealobj(target)
+    if isinstance(target, list):
+        for t in target:
+            assert np.isrealobj(t)
+    else:
+        assert np.isrealobj(target)
     epoch_psds = []
-    for epoch in target:
-        psd, freqs = psd_array_welch(x=epoch, 
-                                     sfreq=sfreq,
-                                     fmin=1, 
-                                     fmax=30, 
-                                     n_fft=np.min([epoch.shape[-1], int(2*sfreq)]))
-        epoch_psds.append(psd)
+    if isinstance(target, list):
+        for epoch in target:
+            psd, freqs = psd_array_welch(x=epoch,
+                                         sfreq=sfreq,
+                                         fmin=1,
+                                         fmax=30,
+                                         n_fft=np.min([epoch.shape[-1], int(2*sfreq)]))
+            epoch_psds.append(psd)
+    else:
+        for epoch in target:
+            psd, freqs = psd_array_welch(x=epoch, 
+                                         sfreq=sfreq,
+                                         fmin=1, 
+                                         fmax=30, 
+                                         n_fft=np.min([epoch.shape[-1], int(2*sfreq)]))
+            epoch_psds.append(psd)
     if design == 'trial_wise':
         epoch_target_phases = [marker_definition.get(x) for x in epochs.events[:, 2]]
     else:

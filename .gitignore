@@ -4,6 +4,9 @@ dist/
 *.egg-info/
 *.egg
 
+# Copilot instructions (contains secrets)
+.github/copilot-instructions.md
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 clamnibs/__pycache__/

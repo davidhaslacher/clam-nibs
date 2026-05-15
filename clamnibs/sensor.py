@@ -14,7 +14,7 @@ import seaborn as sns
 from mne.viz import plot_sensors
 import pandas as pd
 from .misc import _get_ixs_goods, _get_main_target_phase
-from .base import RawCLAM, EpochsCLAM
+from .base import RawCLAM, EpochsCLAM, EpochsCLAMVariable
 from .source import get_target
 from tqdm import tqdm
 
@@ -56,9 +56,9 @@ def clean_sensor_data(obj_no_stim, obj_stim):
     during transcranial alternating current stimulation (tACS)." Neuroimage 228 (2021): 117571.
     """
     
-    if not (isinstance(obj_no_stim, RawCLAM) or isinstance(obj_no_stim, EpochsCLAM)) and \
-            (isinstance(obj_stim, RawCLAM) or isinstance(obj_stim, EpochsCLAM)):
-        raise Exception('clean_sensor_data can only be applied to RawCLAM or EpochsCLAM objects')
+    if not (isinstance(obj_no_stim, (RawCLAM, EpochsCLAM, EpochsCLAMVariable)) and 
+            isinstance(obj_stim, (RawCLAM, EpochsCLAM, EpochsCLAMVariable))):
+        raise Exception('clean_sensor_data can only be applied to RawCLAM, EpochsCLAM, or EpochsCLAMVariable objects')
 
     equal_l_freq = obj_no_stim.info['highpass'] == obj_stim.info['highpass']
     equal_h_freq = obj_no_stim.info['lowpass'] == obj_stim.info['lowpass']
@@ -80,6 +80,9 @@ def clean_sensor_data(obj_no_stim, obj_stim):
         
     if isinstance(obj_stim, RawCLAM):
         A = np.cov(obj_stim.get_data(ixs_goods))
+    elif isinstance(obj_stim, EpochsCLAMVariable):
+        A = np.cov(np.concatenate(
+            [np.real(ep) for ep in obj_stim.get_data(ixs_goods)], axis=-1))
     else:
         A = np.cov(
             np.concatenate(
@@ -88,6 +91,9 @@ def clean_sensor_data(obj_no_stim, obj_stim):
         
     if isinstance(obj_no_stim, RawCLAM):
         B = np.cov(obj_no_stim.get_data(ixs_goods))
+    elif isinstance(obj_no_stim, EpochsCLAMVariable):
+        B = np.cov(np.concatenate(
+            [np.real(ep) for ep in obj_no_stim.get_data(ixs_goods)], axis=-1))
     else:
         B = np.cov(
             np.concatenate(
@@ -108,6 +114,10 @@ def clean_sensor_data(obj_no_stim, obj_stim):
 
     if isinstance(obj_stim, RawCLAM):
         obj_stim._data[ixs_goods] = P @ obj_stim._data[ixs_goods]
+    elif isinstance(obj_stim, EpochsCLAMVariable):
+        obj_stim._data = [np.copy(ep) for ep in obj_stim._data]
+        for i in range(len(obj_stim._data)):
+            obj_stim._data[i][ixs_goods] = P @ obj_stim._data[i][ixs_goods]
     else:
         obj_stim._data[:, ixs_goods] = np.array(
             [P @ epoch for epoch in obj_stim._data[:, ixs_goods]])
@@ -115,7 +125,7 @@ def clean_sensor_data(obj_no_stim, obj_stim):
     obj_stim.interpolate_bads(reset_bads=True)
 
 
-def compute_single_trial_connectivity(raw, measure='phase_lag_index'):
+def compute_single_trial_connectivity(raw, measure='phase_lag_index', end_codes=None):
     
     """
     Compute single-trial amplitude of target oscillation and assign it to CLAM-NIBS target phase.
@@ -126,6 +136,9 @@ def compute_single_trial_connectivity(raw, measure='phase_lag_index'):
         The RawCLAM object containing the raw data to analyze.
     measure : str, optional
         The connectivity measure to compute. Currently, only 'phase_lag_index' is supported (default).
+    end_codes : list of int or None, optional
+        If provided, use variable-length epochs defined by start markers (from marker_definition)
+        to end markers (end_codes). If None, use fixed-length epochs (default).
 
     Returns:
     --------
@@ -163,12 +176,19 @@ def compute_single_trial_connectivity(raw, measure='phase_lag_index'):
             'Bads must be interpolated before connectivity computation')
         
     if design == 'trial_wise':
-        epochs = EpochsCLAM(raw)
-        data_hil = epochs.get_data(picks='eeg')
+        if end_codes is not None:
+            epochs = EpochsCLAMVariable(raw, end_codes=end_codes)
+            data_hil = epochs.get_data(picks='eeg')
+        else:
+            epochs = EpochsCLAM(raw)
+            data_hil = epochs.get_data(picks='eeg')
     else:
         data_hil = raw.copy().apply_hilbert()[None, :, :]
-        
-    phases = np.angle(data_hil)
+    
+    if isinstance(data_hil, list):
+        phases = [np.angle(d) for d in data_hil]
+    else:
+        phases = np.angle(data_hil)
     n_chs = raw.n_chs
     
     conns = []
