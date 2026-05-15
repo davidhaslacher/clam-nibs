@@ -89,6 +89,11 @@ print(df_psd_fixed.head())
 # Variable-length epochs are defined by a start marker and an end marker.
 # Each trial spans from S15 (trial onset) to S16 (response), so the
 # duration varies across trials depending on reaction time.
+#
+# The marker_definition from the RawCLAM object is still used: each
+# variable-length epoch is assigned its target phase based on the
+# condition code (S2 or S3) that appears near the start marker.
+# This is essential for evaluating phase-dependent modulation.
 
 epochs_variable = EpochsCLAMVariable(
     raw_filtered,
@@ -100,6 +105,12 @@ epochs_variable = EpochsCLAMVariable(
 
 print(f'\nVariable epochs: {len(epochs_variable)} trials')
 print(f'Durations (s):   {[f"{d:.2f}" for d in epochs_variable.durations]}')
+
+# Each epoch's event code reflects the condition from marker_definition,
+# not the start_code. This allows target phase lookup per epoch.
+print(f'Event codes:     {epochs_variable.events[:, 2]}')
+target_phases = [marker_definition[c] for c in epochs_variable.events[:, 2]]
+print(f'Target phases:   {target_phases}')
 
 # Data is returned as a list of arrays (one per epoch), since each epoch
 # has a different number of time points.
