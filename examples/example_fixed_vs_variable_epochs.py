@@ -8,6 +8,10 @@ variable-length epochs. Fixed-length epochs are the traditional approach
 trials to span from one event marker to another, accommodating designs
 where trial duration varies (e.g., reaction-time tasks).
 
+In both cases, marker_definition is required to map trigger codes to
+target phases — this is how the toolbox knows which stimulation phase
+was applied on each trial.
+
 Requirements
 ------------
 - A BrainVision dataset (.vhdr) with event markers
@@ -27,26 +31,24 @@ from clamnibs.beamformer import get_target
 from clamnibs.source import compute_single_trial_amplitude, compute_single_trial_psd
 
 # %% -----------------------------------------------------------------------
-# 1. Load and prepare the raw data
+# 1. Variable-length epochs
 # --------------------------------------------------------------------------
 # Replace this path with the path to your own BrainVision .vhdr file.
 vhdr_path = r'path\to\your\data\task_stim.vhdr'
 
 # Define which trigger codes correspond to which target phases.
+# This is required for both fixed and variable-length workflows.
 marker_definition = {
     2: 0.0,      # S2 -> 0 rad
     3: np.pi,    # S3 -> pi rad
 }
 
-# Create the RawCLAM object. The marker_definition maps trigger codes to
-# target phases and is needed for both fixed and variable-length epochs.
-# tmin/tmax define the fixed epoch window relative to the trigger.
+# For variable-length epochs, tmin/tmax are not needed on RawCLAM.
+# They only control fixed-length epoch windows (EpochsCLAM).
 raw = RawCLAM(
     vhdr_path,
     l_freq_target=8.0,
     h_freq_target=14.0,
-    tmin=0,
-    tmax=3,
     n_chs=64,
     design='trial_wise',
     ecg_channels=['ecg'],
@@ -54,47 +56,13 @@ raw = RawCLAM(
     marker_definition=marker_definition,
 )
 
-# %% -----------------------------------------------------------------------
-# 2. Fixed-length epochs (traditional approach)
-# --------------------------------------------------------------------------
-# Filter into the target frequency band and create fixed-length epochs.
-# Each epoch spans tmin to tmax (0 to 3 s) relative to the trigger.
-
+# Filter into the target frequency band.
 raw_filtered = raw.copy().filter(8.0, 14.0)
-epochs_fixed = EpochsCLAM(raw_filtered)
 
-print(f'Fixed epochs: {len(epochs_fixed)} trials')
-print(f'Data shape:   {epochs_fixed.get_data().shape}')
-# -> (n_epochs, n_channels, n_timepoints), all epochs have the same length
-
-# Extract the beamformed target signal for fixed epochs.
-target_fixed = get_target(epochs_fixed)
-print(f'Target shape: {target_fixed.shape}')
-# -> (n_epochs, n_timepoints)
-
-# Compute single-trial amplitude using fixed epochs.
-df_amp_fixed = compute_single_trial_amplitude(raw_filtered, measure='hilbert_amp')
-print('\nFixed-epoch amplitude results:')
-print(df_amp_fixed.head())
-
-# Compute single-trial PSD using fixed epochs (requires broadband filter).
-raw_broadband = raw.copy().filter(1.0, 30.0)
-df_psd_fixed = compute_single_trial_psd(raw_broadband)
-print('\nFixed-epoch PSD results:')
-print(df_psd_fixed.head())
-
-# %% -----------------------------------------------------------------------
-# 3. Variable-length epochs (new approach)
-# --------------------------------------------------------------------------
-# Variable-length epochs are defined by a start marker and an end marker.
-# Each trial spans from S15 (trial onset) to S16 (response), so the
-# duration varies across trials depending on reaction time.
-#
-# The marker_definition from the RawCLAM object is still used: each
-# variable-length epoch is assigned its target phase based on the
-# condition code (S2 or S3) that appears near the start marker.
-# This is essential for evaluating phase-dependent modulation.
-
+# Create variable-length epochs: each trial spans from S15 (onset) to
+# S16 (response), so duration varies with reaction time.
+# The marker_definition is still used: each epoch is assigned its target
+# phase based on the condition code (S2 or S3) near the start marker.
 epochs_variable = EpochsCLAMVariable(
     raw_filtered,
     end_codes=[16],        # S16 = response marker (end of trial)
@@ -103,7 +71,7 @@ epochs_variable = EpochsCLAMVariable(
     tmax=0,                # offset relative to end marker (seconds)
 )
 
-print(f'\nVariable epochs: {len(epochs_variable)} trials')
+print(f'Variable epochs: {len(epochs_variable)} trials')
 print(f'Durations (s):   {[f"{d:.2f}" for d in epochs_variable.durations]}')
 
 # Each epoch's event code reflects the condition from marker_definition,
@@ -133,13 +101,14 @@ df_amp_var = compute_single_trial_amplitude(
 print('\nVariable-epoch amplitude results:')
 print(df_amp_var.head())
 
-# Compute single-trial PSD with variable-length epochs.
+# Compute single-trial PSD with variable-length epochs (requires broadband).
+raw_broadband = raw.copy().filter(1.0, 30.0)
 df_psd_var = compute_single_trial_psd(raw_broadband, end_codes=[16])
 print('\nVariable-epoch PSD results:')
 print(df_psd_var.head())
 
 # %% -----------------------------------------------------------------------
-# 4. Indexing and slicing variable-length epochs
+# 2. Indexing and slicing variable-length epochs
 # --------------------------------------------------------------------------
 # You can index EpochsCLAMVariable just like a list.
 
@@ -152,7 +121,49 @@ print(f'Subset length:      {len(subset)}')
 print(f'Fancy index length: {len(by_list)}')
 
 # %% -----------------------------------------------------------------------
-# 5. When to use which approach
+# 3. Fixed-length epochs (traditional approach)
+# --------------------------------------------------------------------------
+# For fixed-length epochs, tmin/tmax must be set on RawCLAM.
+# Each epoch spans tmin to tmax (0 to 3 s) relative to the trigger.
+
+raw_fixed = RawCLAM(
+    vhdr_path,
+    l_freq_target=8.0,
+    h_freq_target=14.0,
+    tmin=0,
+    tmax=3,
+    n_chs=64,
+    design='trial_wise',
+    ecg_channels=['ecg'],
+    misc_channels=['envelope', 'envelope_am', 'eda'],
+    marker_definition=marker_definition,
+)
+
+raw_fixed_filtered = raw_fixed.copy().filter(8.0, 14.0)
+epochs_fixed = EpochsCLAM(raw_fixed_filtered)
+
+print(f'\nFixed epochs: {len(epochs_fixed)} trials')
+print(f'Data shape:   {epochs_fixed.get_data().shape}')
+# -> (n_epochs, n_channels, n_timepoints), all epochs have the same length
+
+# Extract the beamformed target signal for fixed epochs.
+target_fixed = get_target(epochs_fixed)
+print(f'Target shape: {target_fixed.shape}')
+# -> (n_epochs, n_timepoints)
+
+# Compute single-trial amplitude using fixed epochs.
+df_amp_fixed = compute_single_trial_amplitude(raw_fixed_filtered, measure='hilbert_amp')
+print('\nFixed-epoch amplitude results:')
+print(df_amp_fixed.head())
+
+# Compute single-trial PSD using fixed epochs (requires broadband filter).
+raw_fixed_broadband = raw_fixed.copy().filter(1.0, 30.0)
+df_psd_fixed = compute_single_trial_psd(raw_fixed_broadband)
+print('\nFixed-epoch PSD results:')
+print(df_psd_fixed.head())
+
+# %% -----------------------------------------------------------------------
+# 4. When to use which approach
 # --------------------------------------------------------------------------
 # Use FIXED-LENGTH epochs (EpochsCLAM) when:
 #   - All trials have the same structure and duration
