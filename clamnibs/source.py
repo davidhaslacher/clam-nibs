@@ -264,7 +264,8 @@ def compute_single_trial_psd(raw, end_codes=None):
                                          sfreq=sfreq,
                                          fmin=1,
                                          fmax=30,
-                                         n_fft=np.min([epoch.shape[-1], int(2*sfreq)]))
+					 n_fft = int(2*sfreq),
+					 n_per_seg = min(epoch.shape[-1], int(2*sfreq)))
             epoch_psds.append(psd)
     else:
         for epoch in target:
@@ -272,7 +273,8 @@ def compute_single_trial_psd(raw, end_codes=None):
                                          sfreq=sfreq,
                                          fmin=1, 
                                          fmax=30, 
-                                         n_fft=np.min([epoch.shape[-1], int(2*sfreq)]))
+					 n_fft = int(2*sfreq),
+					 n_per_seg = min(epoch.shape[-1], int(2*sfreq)))
             epoch_psds.append(psd)
     if design == 'trial_wise':
         epoch_target_phases = [marker_definition.get(x) for x in epochs.events[:, 2]]
