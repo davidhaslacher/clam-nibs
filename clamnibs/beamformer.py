@@ -6,11 +6,7 @@ from mne.viz import plot_topomap
 import mne
 import seaborn as sns
 from .misc import _get_ixs_goods
-from mne.filter import next_fast_len
-from scipy.signal import hilbert
-from scipy.stats import binomtest
-from pycircstat.descriptive import mean as circmean
-from .base import RawCLAM, EpochsCLAM
+from .base import RawCLAM, EpochsCLAM, EpochsCLAMVariable
 
 
 def _get_lcmv_weights(COV, forward):
@@ -54,12 +50,33 @@ def get_target(obj):
         IEEE assp magazine 5.2 (1988): 4-24.
     """
     
-    if not (isinstance(obj, RawCLAM) or isinstance(obj, EpochsCLAM)):
-        raise Exception('get_target can only be applied to RawCLAM or EpochsCLAM objects')
+    if not (isinstance(obj, RawCLAM) or isinstance(obj, EpochsCLAM) or isinstance(obj, EpochsCLAMVariable)):
+        raise Exception('get_target can only be applied to RawCLAM, EpochsCLAM, or EpochsCLAMVariable objects')
     ixs_goods = _get_ixs_goods(obj)
     target_codes = obj.marker_definition.keys()
     target_phases = obj.marker_definition.values()
-    if isinstance(obj, mne.Epochs):
+    if isinstance(obj, EpochsCLAMVariable):
+        epochs_events = obj.events
+        epochs_data = obj.get_data(ixs_goods)
+        forward_goods = obj.forward_full[ixs_goods]
+        covs = {}
+        for tc, tp in zip(target_codes, target_phases, strict=True):
+            mask = epochs_events[:, 2] == tc
+            matching = [ep for ep, m in zip(epochs_data, mask) if m]
+            if matching:
+                covs[tc] = np.cov(np.real(np.concatenate(matching, axis=-1)))
+        cl_codes = [tc for tc, tp in zip(target_codes, target_phases, strict=True) if tp not in ('open-loop', 'no-stim')]
+        cl_codes = [tc for tc in cl_codes if tc in covs]
+        if cl_codes:
+            covs = _update_dict_with_mean(covs, cl_codes)
+        ws = {}
+        for tc in covs.keys():
+            ws[tc] = _get_lcmv_weights(covs[tc], forward_goods)
+        target = []
+        for tc, ep in zip(epochs_events[:, 2], epochs_data, strict=True):
+            target.append((ws[tc] @ ep).squeeze())
+        # return list of 1D arrays (variable length)
+    elif isinstance(obj, mne.Epochs):
         epochs_events = obj.events
         epochs_data = obj.get_data(ixs_goods)
         forward_goods = obj.forward_full[ixs_goods]
@@ -98,62 +115,12 @@ def get_target(obj):
             
         w = _get_lcmv_weights(COV, forward_goods)
         target = (w @ raw_data).squeeze()
-    target *= obj.flip
+    if isinstance(target, list):
+        target = [t * obj.flip for t in target]
+    else:
+        target *= obj.flip
 
     return target
-
-
-def set_flip(obj, plot=False):
-    
-    """Determine and set the dipole sign flip for the target signal.
-
-    This method determines the dipole sign flip for the target signal based on its waveform asymmetry.
-    It analyzes the phases of the target signal to determine whether the rising or falling phase is dominant (longer),
-    and sets the flip factor accordingly.
-
-    Parameters:
-    -----------
-    obj : RawCLAM or EpochsCLAM object
-        The RawCLAM or EpochsCLAM object containing EEG data.
-    plot : bool, optional
-        Whether to plot the distribution of target signal phases and the result of flip determination. Default is False.
-
-    Returns:
-    --------
-    None
-
-    Raises:
-    -------
-    Exception:
-        If the input object is not an instance of RawCLAM or EpochsCLAM.
-    """
-    
-    if not (isinstance(obj, RawCLAM) or isinstance(obj, EpochsCLAM)):
-        raise Exception('set_flip can only be applied to RawCLAM or EpochsCLAM objects')
-    obj.flip = 1 # required for get_target() to run
-    target = get_target(obj)
-    is_complex = np.iscomplexobj(target)
-    if not is_complex:
-        n_times = target.shape[-1]
-        n_fft = next_fast_len(n_times)
-        target = hilbert(target, N=n_fft, axis=-1)[..., :n_times]
-    target_phases = np.angle(target)
-    n_rising = (target_phases < 0).sum()
-    n_falling = (target_phases > 0).sum()
-    if n_rising > n_falling:
-        flip = -1
-    else:
-        flip = 1
-    if plot:
-        p = binomtest(n_rising, n_rising + n_falling).pvalue
-        _, ax = plt.subplots(1, 1, subplot_kw={'projection': 'polar'})
-        ax.hist(target_phases.flatten(), color='k', alpha=0.3)
-        ax.set_title('flip = {:d}, p = {:.4f}'.format(flip, p))
-        ax.yaxis.grid(False)
-        ax.xaxis.grid(False)
-        ax.get_yaxis().set_visible(False)
-        ax.axvline(circmean(target_phases.flatten()), c='r')
-    obj.flip = flip
 
 
 def set_forward(raw, l_freq_noise, h_freq_noise, n_comp=4):
