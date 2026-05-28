@@ -16,10 +16,10 @@ from numpy.random import permutation
 from scipy.stats import permutation_test
 import os
 import matplotlib
-from fooof import FOOOF
-from fooof.analysis import get_band_peak_fm
 from .misc import _fmt
 from .misc import df_to_array
+from .misc import extract_psd_measure
+from .misc import compute_psd_phase_means
 
 # TODO:
 # Statistics over sessions in session_wise studies
@@ -1035,43 +1035,6 @@ def test_modulation_psd(
         raise Exception(
             'Test level should be either \'participant\', \'group_same\', or \'group_different\'')
         
-def extract_psd_measure(freqs, psd, l_freq_target, h_freq_target, measure='power'):
-    """Extract the specified measure from the power spectral density (PSD) using FOOOF.
-
-    Parameters:
-    -----------
-    freqs : array-like
-        The frequencies corresponding to the PSD values.
-        
-    psd : array-like
-        The PSD values.
-        
-    l_freq_target : float
-        The lower frequency limit of the target frequency range.
-        
-    h_freq_target : float
-        The higher frequency limit of the target frequency range.
-        
-    measure : str, optional (default='power')
-        The measure to extract ('power', 'frequency', or 'aperiodic').
-
-    Returns:
-    --------
-    float
-        The extracted measure value.
-    """
-    
-    fm = FOOOF(verbose=False)
-    fm.fit(freqs, psd)
-    freq, pow = get_band_peak_fm(fm, [l_freq_target, h_freq_target], select_highest=True)[:2]
-    aper = fm.get_results().aperiodic_params[-1]
-    if measure == 'power':
-        return pow
-    elif measure == 'frequency':
-        return freq
-    elif measure == 'aperiodic':
-        return aper
-        
 def _fooof_agg(x, measure, freqs, l_freq_target, h_freq_target):
     # If we are aggregating over a single column of PSDs in a DataFrame
     if isinstance(x, pd.Series):
@@ -1130,16 +1093,16 @@ def _test_modulation_psd_participant(df_data, measure, freq_lim_tol, plot):
         tval = res.statistic
         pval = res.pvalue
         tval_unit = stat
-        y = _fooof_agg(target_psds, 
-                       measure=measure, 
-                       freqs=df_data.attrs['freqs'], 
-                       l_freq_target=df_data.attrs['l_freq_target'] - freq_lim_tol, 
-                       h_freq_target=df_data.attrs['h_freq_target'] + freq_lim_tol)
+        df_participant.attrs = df_data.attrs.copy()
+        df_phase_means = compute_psd_phase_means(df_participant,
+                                                 measure=measure,
+                                                 freq_lim_tol=freq_lim_tol)
+        y = df_phase_means['value'].to_numpy()
         if plot:
             plt.figure()
             has_string_phases = any(isinstance(ph, str) for ph in target_phases)
             x_label = 'Condition' if has_string_phases else 'Target Phase (°)'
-            x = target_phases
+            x = df_phase_means['target_phase'].to_numpy()
             x = [ph if isinstance(ph, str) else round(np.rad2deg(ph)) for ph in x]
             df_plot = pd.DataFrame(
                 {x_label: x, '{}'.format(measure): y})
@@ -1170,7 +1133,7 @@ def _test_modulation_psd_participant(df_data, measure, freq_lim_tol, plot):
                                   't_unit': [tval_unit],
                                   't_value': [tval],
                                   'p_value': [pval]})
-        for target_phase, y_ in zip(target_phases, y):
+        for target_phase, y_ in zip(df_phase_means['target_phase'], y):
             df_append[_phase_mean_column(target_phase)] = y_
         df_results = pd.concat([df_results, df_append])
     return df_results

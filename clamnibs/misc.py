@@ -11,6 +11,8 @@ from .base import RawCLAM, EpochsCLAM, EpochsCLAMVariable
 from scipy.io import savemat
 import warnings
 from scipy.stats import zscore
+from fooof import FOOOF
+from fooof.analysis import get_band_peak_fm
 
 def concat_dfs(dfs):
     attrs = dfs[-1].attrs
@@ -59,6 +61,81 @@ def _fmt(string):
         ' of ').replace(
             ' And ',
         ' and ')
+
+def extract_psd_measure(freqs, psd, l_freq_target, h_freq_target, measure='power'):
+    """Extract the specified measure from the power spectral density (PSD) using FOOOF.
+
+    Parameters:
+    -----------
+    freqs : array-like
+        Frequency values corresponding to the PSD.
+
+    psd : array-like
+        Power spectral density values.
+
+    l_freq_target : float
+        The lower frequency limit of the target frequency range.
+
+    h_freq_target : float
+        The higher frequency limit of the target frequency range.
+
+    measure : str, optional (default='power')
+        The measure to extract ('power', 'frequency', or 'aperiodic').
+
+    Returns:
+    --------
+    float
+        The extracted measure value.
+    """
+
+    fm = FOOOF(verbose=False)
+    fm.fit(freqs, psd)
+    freq, pow = get_band_peak_fm(fm, [l_freq_target, h_freq_target], select_highest=True)[:2]
+    aper = fm.get_results().aperiodic_params[-1]
+    if measure == 'power':
+        return pow
+    elif measure == 'frequency':
+        return freq
+    elif measure == 'aperiodic':
+        return aper
+
+def compute_psd_phase_means(df_data, measure='power', freq_lim_tol=1):
+    """Compute per-participant, per-phase PSD-derived measures.
+
+    Parameters:
+    -----------
+    df_data : pandas.DataFrame
+        A PSD DataFrame as returned by compute_single_trial_psd.
+
+    measure : str, optional (default='power')
+        The PSD-derived measure to extract ('power', 'frequency', or 'aperiodic').
+
+    freq_lim_tol : float, optional (default=1)
+        Tolerance added to the target frequency limits before extracting the measure.
+
+    Returns:
+    --------
+    pandas.DataFrame
+        A DataFrame with columns participant, target_phase, measure, and value.
+    """
+
+    freqs = df_data.attrs['freqs']
+    l_freq_target = df_data.attrs['l_freq_target'] - freq_lim_tol
+    h_freq_target = df_data.attrs['h_freq_target'] + freq_lim_tol
+
+    df_results = pd.DataFrame()
+    gb_participants = df_data.sort_values('participant').groupby('participant')
+    for participant, df_participant in gb_participants:
+        gb_target_phase = df_participant.sort_values('target_phase').groupby('target_phase')
+        for target_phase, df_target_phase in gb_target_phase:
+            psd = np.mean(df_target_phase['value'], axis=0)
+            value = extract_psd_measure(freqs, psd, l_freq_target, h_freq_target, measure=measure)
+            df_append = pd.DataFrame({'participant': [participant],
+                                      'target_phase': [target_phase],
+                                      'measure': [measure],
+                                      'value': [value]})
+            df_results = pd.concat([df_results, df_append])
+    return df_results
 
 def _get_trial_target_codes_cwm_error(raw):
     events = mne.events_from_annotations(raw)[0]
