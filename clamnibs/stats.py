@@ -130,6 +130,17 @@ def _dft_amp_stat_group_different(*args, orig_args=None):
 def _wrap(phases):
     return np.angle(np.exp(1j*phases))
 
+def _phase_mean_column(target_phase):
+    if isinstance(target_phase, str):
+        return 'mean_{}'.format(target_phase.replace('-', '_').replace(' ', '_'))
+    phase_deg = np.rad2deg(target_phase) % 360
+    if np.isclose(phase_deg, 360):
+        phase_deg = 0
+    phase_deg = round(phase_deg, 10)
+    if float(phase_deg).is_integer():
+        phase_deg = int(phase_deg)
+    return 'mean_{}_deg'.format(phase_deg)
+
 def test_sensor_network_modulation(
         df_data,
         info,
@@ -1119,17 +1130,17 @@ def _test_modulation_psd_participant(df_data, measure, freq_lim_tol, plot):
         tval = res.statistic
         pval = res.pvalue
         tval_unit = stat
+        y = _fooof_agg(target_psds, 
+                       measure=measure, 
+                       freqs=df_data.attrs['freqs'], 
+                       l_freq_target=df_data.attrs['l_freq_target'] - freq_lim_tol, 
+                       h_freq_target=df_data.attrs['h_freq_target'] + freq_lim_tol)
         if plot:
             plt.figure()
             has_string_phases = any(isinstance(ph, str) for ph in target_phases)
             x_label = 'Condition' if has_string_phases else 'Target Phase (°)'
             x = target_phases
             x = [ph if isinstance(ph, str) else round(np.rad2deg(ph)) for ph in x]
-            y = _fooof_agg(target_psds, 
-                           measure=measure, 
-                           freqs=df_data.attrs['freqs'], 
-                           l_freq_target=df_data.attrs['l_freq_target'] - freq_lim_tol, 
-                           h_freq_target=df_data.attrs['h_freq_target'] + freq_lim_tol)
             df_plot = pd.DataFrame(
                 {x_label: x, '{}'.format(measure): y})
             sns.barplot(
@@ -1159,6 +1170,8 @@ def _test_modulation_psd_participant(df_data, measure, freq_lim_tol, plot):
                                   't_unit': [tval_unit],
                                   't_value': [tval],
                                   'p_value': [pval]})
+        for target_phase, y_ in zip(target_phases, y):
+            df_append[_phase_mean_column(target_phase)] = y_
         df_results = pd.concat([df_results, df_append])
     return df_results
 
