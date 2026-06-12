@@ -1108,7 +1108,14 @@ def test_modulation_psd(
             raise Exception("test_level='group_different' is not supported for 'optimal'/'suboptimal' conditions, "
                             "because these conditions are comparable across participants by design. "
                             "Use test_level='group_same' instead.")
-        df_results = _test_modulation_group_different(df_data=df_data, measure=measure, agg_func=agg_func, plot=plot, plot_mode=plot_mode)
+        agg_func = partial(_fooof_agg, 
+                    measure=measure,  
+                    freqs=df_data.attrs['freqs'], 
+                    l_freq_target=df_data.attrs['l_freq_target'] - freq_lim_tol, 
+                    h_freq_target=df_data.attrs['h_freq_target'] + freq_lim_tol)
+        # Wrap agg_func so it accepts the participant-phase trial array form
+        wrapped_agg = lambda phase_data: agg_func(pd.Series(phase_data))
+        df_results = _test_modulation_group_different(df_data=df_data, measure=measure, agg_func=wrapped_agg, plot=plot, plot_mode=plot_mode)
         return df_results
     else:
         raise Exception(
