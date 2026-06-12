@@ -762,10 +762,88 @@ def test_modulation(
             raise Exception("test_level='group_different' is not supported for 'optimal'/'suboptimal' conditions, "
                             "because these conditions are comparable across participants by design. "
                             "Use test_level='group_same' instead.")
-        raise Exception("test_modulation does not yet support test_level='group_different'")
+        df_results = _test_modulation_group_different(df_data=df_data, measure=measure, agg_func=agg_func, plot=plot, plot_mode=plot_mode)
+        return df_results
     else:
         raise Exception(
             'Test level should be either \'participant\', \'group_same\', or \'group_different\'')
+
+
+def _test_modulation_group_different(df_data, measure, agg_func, plot, plot_mode):
+    # Collect per-participant data: list of (list of per-phase trial arrays)
+    gb_participants = df_data.sort_values('participant').groupby('participant')
+    participants = []
+    all_participant_data = []  # outer: participants, inner: phases, each: 1-D array of trial values
+    target_phases_global = None
+    for participant, df_participant in gb_participants:
+        participants.append(participant)
+        gb_target_phase = df_participant.sort_values('target_phase').groupby('target_phase')
+        target_phases = []
+        participant_data = []
+        for target_phase, df_target_phase in gb_target_phase:
+            target_phases.append(target_phase)
+            participant_data.append(df_target_phase['value'].to_numpy())
+        all_participant_data.append(participant_data)
+        if target_phases_global is None:
+            target_phases_global = target_phases
+
+    def _participant_dft_amp(participant_data):
+        avgs = np.array([agg_func(phase_data) for phase_data in participant_data])
+        amp, _ = _dft(avgs)
+        return amp
+
+    def _group_stat(data_list):
+        return np.nanmean([_participant_dft_amp(pd) for pd in data_list])
+
+    observed_stat = _group_stat(all_participant_data)
+
+    # Permutation: shuffle trials across phase bins within each participant independently
+    n_resamples = 1000
+    null_distribution = np.empty(n_resamples)
+    for i in range(n_resamples):
+        permuted_data_list = []
+        for participant_data in all_participant_data:
+            all_trials = np.concatenate(participant_data)
+            np.random.shuffle(all_trials)
+            sizes = [len(phase_data) for phase_data in participant_data]
+            permuted_participant_data = []
+            idx = 0
+            for size in sizes:
+                permuted_participant_data.append(all_trials[idx:idx + size])
+                idx += size
+            permuted_data_list.append(permuted_participant_data)
+        null_distribution[i] = _group_stat(permuted_data_list)
+
+    pval = np.mean(null_distribution >= observed_stat)
+    tval = observed_stat
+    tval_unit = 'dft_amp'
+
+    if plot:
+        per_participant_amps = [_participant_dft_amp(pd) for pd in all_participant_data]
+        plt.figure()
+        df_plot = pd.DataFrame({'Participant': participants, measure: per_participant_amps})
+        if plot_mode == 'bar':
+            sns.barplot(df_plot, x='Participant', y=measure, color='k', alpha=0.5, errorbar=None)
+        else:
+            sns.barplot(df_plot, x='Participant', y=measure, color='k', alpha=0.5, errorbar=None)
+            sns.stripplot(df_plot, x='Participant', y=measure, color='r', alpha=0.8)
+        plt.ylabel('DFT Amplitude ({})'.format(measure))
+        plt.title('dft_amp = {:.3e}, p = {:.3e}'.format(tval, pval))
+        sns.despine()
+        if isinstance(plot, str):
+            matplotlib.rcParams['pdf.fonttype'] = 42
+            matplotlib.rcParams['ps.fonttype'] = 42
+            sns.set_context('paper')
+            if not os.path.exists(plot):
+                os.makedirs(plot, exist_ok=True)
+            plt.savefig('{}_modulation_group_different.pdf'.format(measure))
+            plt.close()
+
+    df_results = pd.DataFrame({'participant': ['group'],
+                               't_unit': [tval_unit],
+                               't_value': [tval],
+                               'p_value': [pval]})
+    return df_results
 
 
 def _test_modulation_participant(df_data, measure, agg_func, plot, plot_mode):
@@ -1030,7 +1108,8 @@ def test_modulation_psd(
             raise Exception("test_level='group_different' is not supported for 'optimal'/'suboptimal' conditions, "
                             "because these conditions are comparable across participants by design. "
                             "Use test_level='group_same' instead.")
-        raise Exception("test_modulation does not yet support test_level='group_different'")
+        df_results = _test_modulation_group_different(df_data=df_data, measure=measure, agg_func=agg_func, plot=plot, plot_mode=plot_mode)
+        return df_results
     else:
         raise Exception(
             'Test level should be either \'participant\', \'group_same\', or \'group_different\'')
