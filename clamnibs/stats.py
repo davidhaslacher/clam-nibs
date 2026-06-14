@@ -16,10 +16,10 @@ from numpy.random import permutation
 from scipy.stats import permutation_test
 import os
 import matplotlib
-from fooof import FOOOF
-from fooof.analysis import get_band_peak_fm
 from .misc import _fmt
 from .misc import df_to_array
+from .misc import extract_psd_measure
+from .misc import compute_psd_phase_means
 
 # TODO:
 # Statistics over sessions in session_wise studies
@@ -129,6 +129,17 @@ def _dft_amp_stat_group_different(*args, orig_args=None):
 
 def _wrap(phases):
     return np.angle(np.exp(1j*phases))
+
+def _phase_mean_column(target_phase):
+    if isinstance(target_phase, str):
+        return 'mean_{}'.format(target_phase.replace('-', '_').replace(' ', '_'))
+    phase_deg = np.rad2deg(target_phase) % 360
+    if np.isclose(phase_deg, 360):
+        phase_deg = 0
+    phase_deg = round(phase_deg, 10)
+    if float(phase_deg).is_integer():
+        phase_deg = int(phase_deg)
+    return 'mean_{}_deg'.format(phase_deg)
 
 def test_sensor_network_modulation(
         df_data,
@@ -1097,48 +1108,18 @@ def test_modulation_psd(
             raise Exception("test_level='group_different' is not supported for 'optimal'/'suboptimal' conditions, "
                             "because these conditions are comparable across participants by design. "
                             "Use test_level='group_same' instead.")
-        df_results = _test_modulation_group_different(df_data=df_data, measure=measure, agg_func=agg_func, plot=plot, plot_mode=plot_mode)
+        agg_func = partial(_fooof_agg, 
+                    measure=measure,  
+                    freqs=df_data.attrs['freqs'], 
+                    l_freq_target=df_data.attrs['l_freq_target'] - freq_lim_tol, 
+                    h_freq_target=df_data.attrs['h_freq_target'] + freq_lim_tol)
+        # Wrap agg_func so it accepts the participant-phase trial array form
+        wrapped_agg = lambda phase_data: agg_func(pd.Series(phase_data))
+        df_results = _test_modulation_group_different(df_data=df_data, measure=measure, agg_func=wrapped_agg, plot=plot, plot_mode=plot_mode)
         return df_results
     else:
         raise Exception(
             'Test level should be either \'participant\', \'group_same\', or \'group_different\'')
-        
-def extract_psd_measure(freqs, psd, l_freq_target, h_freq_target, measure='power'):
-    """Extract the specified measure from the power spectral density (PSD) using FOOOF.
-
-    Parameters:
-    -----------
-    freqs : array-like
-        The frequencies corresponding to the PSD values.
-        
-    psd : array-like
-        The PSD values.
-        
-    l_freq_target : float
-        The lower frequency limit of the target frequency range.
-        
-    h_freq_target : float
-        The higher frequency limit of the target frequency range.
-        
-    measure : str, optional (default='power')
-        The measure to extract ('power', 'frequency', or 'aperiodic').
-
-    Returns:
-    --------
-    float
-        The extracted measure value.
-    """
-    
-    fm = FOOOF(verbose=False)
-    fm.fit(freqs, psd)
-    freq, pow = get_band_peak_fm(fm, [l_freq_target, h_freq_target], select_highest=True)[:2]
-    aper = fm.get_results().aperiodic_params[-1]
-    if measure == 'power':
-        return pow
-    elif measure == 'frequency':
-        return freq
-    elif measure == 'aperiodic':
-        return aper
         
 def _fooof_agg(x, measure, freqs, l_freq_target, h_freq_target):
     # If we are aggregating over a single column of PSDs in a DataFrame
@@ -1198,17 +1179,17 @@ def _test_modulation_psd_participant(df_data, measure, freq_lim_tol, plot):
         tval = res.statistic
         pval = res.pvalue
         tval_unit = stat
+        df_participant.attrs = df_data.attrs.copy()
+        df_phase_means = compute_psd_phase_means(df_participant,
+                                                 measure=measure,
+                                                 freq_lim_tol=freq_lim_tol)
+        y = df_phase_means['value'].to_numpy()
         if plot:
             plt.figure()
             has_string_phases = any(isinstance(ph, str) for ph in target_phases)
             x_label = 'Condition' if has_string_phases else 'Target Phase (°)'
-            x = target_phases
+            x = df_phase_means['target_phase'].to_numpy()
             x = [ph if isinstance(ph, str) else round(np.rad2deg(ph)) for ph in x]
-            y = _fooof_agg(target_psds, 
-                           measure=measure, 
-                           freqs=df_data.attrs['freqs'], 
-                           l_freq_target=df_data.attrs['l_freq_target'] - freq_lim_tol, 
-                           h_freq_target=df_data.attrs['h_freq_target'] + freq_lim_tol)
             df_plot = pd.DataFrame(
                 {x_label: x, '{}'.format(measure): y})
             sns.barplot(
@@ -1238,6 +1219,8 @@ def _test_modulation_psd_participant(df_data, measure, freq_lim_tol, plot):
                                   't_unit': [tval_unit],
                                   't_value': [tval],
                                   'p_value': [pval]})
+        for target_phase, y_ in zip(df_phase_means['target_phase'], y):
+            df_append[_phase_mean_column(target_phase)] = y_
         df_results = pd.concat([df_results, df_append])
     return df_results
 
