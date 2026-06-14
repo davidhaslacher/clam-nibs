@@ -98,6 +98,10 @@ def extract_psd_measure(freqs, psd, l_freq_target, h_freq_target, measure='power
         return freq
     elif measure == 'aperiodic':
         return aper
+    else:
+        raise ValueError(
+            f"Invalid measure '{measure}'. Supported values are 'power', 'frequency', and 'aperiodic'."
+        )
 
 def compute_psd_phase_means(df_data, measure='power', freq_lim_tol=1):
     """Compute per-participant, per-phase PSD-derived measures.
