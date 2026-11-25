@@ -348,7 +348,7 @@ def _test_sensor_network_modulation_group_same(df_data, info, measure, threshold
         first_pass_done = False
         tvals, clusters, pvals, _ = permutation_cluster_test(list(dummy_data),
                                                              threshold=threshold,
-                                                             n_permutations=100,
+                                                             n_permutations=1000,
                                                              adjacency=adjacency,
                                                              out_type='indices',
                                                              step_down_p=0,
@@ -398,10 +398,10 @@ def _test_sensor_network_modulation_group_different(df_data, info, measure, thre
         # data is now (n_phases, n_epochs, n_chs, n_chs)
         all_data.append(data)
     n_participants = len(all_data)
-    n_phases = data[0].shape[0]
-    n_chs = data[0].shape[-1]
+    n_phases = all_data[0].shape[0]#change1
+    n_chs = all_data[0].shape[-1]#change2
     n_conns = n_chs**2
-    all_data = [d.reshape(n_phases, -1, n_conns) for d in all_data]
+    all_data = [d.reshape(n_phases, d.shape[1], n_conns) for d in all_data]#change3
     # each data in all_data is now (n_phases, n_epochs, n_conns)
     adjacency = np.zeros((n_conns, n_conns))
     for ix_conn_1 in range(n_conns):
@@ -428,7 +428,7 @@ def _test_sensor_network_modulation_group_different(df_data, info, measure, thre
     first_pass_done = False
     tvals, clusters, pvals, _ = permutation_cluster_test(dummy_data,
                                                             threshold=threshold,
-                                                            n_permutations=100,
+                                                            n_permutations=1000,
                                                             adjacency=adjacency,
                                                             out_type='indices',
                                                             step_down_p=0,
@@ -648,7 +648,7 @@ def _test_sensor_cluster_modulation_group_different(df_data, info, measure, thre
     first_pass_done = False
     tvals, clusters, pvals, _ = permutation_cluster_test(dummy_data,
                                                             threshold=threshold,
-                                                            n_permutations=100,
+                                                            n_permutations=1000,
                                                             adjacency=adjacency,
                                                             out_type='indices',
                                                             step_down_p=0,
